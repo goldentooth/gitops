@@ -28,6 +28,7 @@ spec:
     # Enable Prometheus metrics
     prometheus:
       serviceAccount: metallb-controller
+      namespace: metallb-system
       serviceMonitor:
         enabled: true
     # Speaker configuration for L2 mode
