@@ -1,0 +1,22 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: apps
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 2m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: "./apps/goldentooth"
+  prune: true
+  wait: true
+  dependsOn:
+    - name: infrastructure
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
