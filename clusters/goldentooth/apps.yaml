@@ -11,7 +11,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: "./apps/goldentooth"
+  path: ./apps
   prune: true
   wait: true
   dependsOn:
