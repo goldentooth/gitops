@@ -2,7 +2,5 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  # Applications
-  - ../base/p5js-sketches
-patches:
-  # Cluster-specific application patches
+  - ../base/podinfo
+patches: []
