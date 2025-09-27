@@ -25,12 +25,12 @@ spec:
     remediation:
       retries: 3
   values:
-    # Enable Prometheus metrics
+    # Enable Prometheus metrics (ServiceMonitor disabled - requires Prometheus Operator)
     prometheus:
       serviceAccount: metallb-controller
       namespace: metallb-system
       serviceMonitor:
-        enabled: true
+        enabled: false
     # Speaker configuration for L2 mode
     speaker:
       enabled: true
