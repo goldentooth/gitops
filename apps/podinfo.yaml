@@ -42,3 +42,16 @@ spec:
       target:
         name: podinfo
         kind: HorizontalPodAutoscaler
+    - patch: |-
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: podinfo
+          annotations:
+            metallb.io/address-pool: default           # some newer installs
+        spec:
+          type: LoadBalancer
+          externalTrafficPolicy: Local
+      target:
+        kind: Service
+        name: podinfo
