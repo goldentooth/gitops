@@ -57,6 +57,10 @@ spec:
               targetPort: 9898
               protocol: TCP
               name: http
+            - port: 9999
+              targetPort: 9999
+              protocol: TCP
+              name: grpc
       target:
         kind: Service
         name: podinfo
