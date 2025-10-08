@@ -53,6 +53,7 @@ spec:
           type: LoadBalancer
           externalTrafficPolicy: Local
           ports:
+            $patch: replace
             - port: 80
               targetPort: 9898
               protocol: TCP
