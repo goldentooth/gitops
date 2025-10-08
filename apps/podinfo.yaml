@@ -52,6 +52,11 @@ spec:
         spec:
           type: LoadBalancer
           externalTrafficPolicy: Local
+          ports:
+            - port: 80
+              targetPort: 9898
+              protocol: TCP
+              name: http
       target:
         kind: Service
         name: podinfo
