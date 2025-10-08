@@ -43,17 +43,18 @@ spec:
         name: podinfo
         kind: HorizontalPodAutoscaler
     - patch: |-
-        apiVersion: v1
-        kind: Service
-        metadata:
-          name: podinfo
-          annotations:
-            metallb.io/address-pool: default           # some newer installs
-        spec:
-          type: LoadBalancer
-          externalTrafficPolicy: Local
-          ports:
-            $patch: replace
+        - op: add
+          path: /metadata/annotations/metallb.io~1address-pool
+          value: default
+        - op: replace
+          path: /spec/type
+          value: LoadBalancer
+        - op: add
+          path: /spec/externalTrafficPolicy
+          value: Local
+        - op: replace
+          path: /spec/ports
+          value:
             - port: 80
               targetPort: 9898
               protocol: TCP
