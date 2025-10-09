@@ -46,6 +46,9 @@ spec:
         - op: add
           path: /metadata/annotations/metallb.io~1address-pool
           value: default
+        - op: add
+          path: /metadata/annotations/external-dns.alpha.kubernetes.io~1hostname
+          value: podinfo.goldentooth.net
         - op: replace
           path: /spec/type
           value: LoadBalancer
