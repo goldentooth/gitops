@@ -97,7 +97,11 @@ spec:
       volumes:
         - name: certs
           configMap:
-            name: step-ca-certs
+            name: step-ca-step-ca-step-certificates-certs
         - name: secrets
-          secret:
-            secretName: step-ca-secrets
+          projected:
+            sources:
+              - configMap:
+                  name: step-ca-step-ca-step-certificates-secrets
+              - secret:
+                  name: step-ca-step-ca-step-certificates-ca-password
