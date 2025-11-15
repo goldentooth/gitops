@@ -84,8 +84,12 @@ spec:
       ui:
         enabled: true
         rollOutPods: true
+        service:
+          type: LoadBalancer
+          annotations:
+            external-dns.alpha.kubernetes.io/hostname: hubble.goldentooth.net
         ingress:
-          enabled: false  # Configure ingress when you're ready
+          enabled: false  # Using LoadBalancer instead of Ingress
 
     # Enable the Cilium Operator
     operator:
