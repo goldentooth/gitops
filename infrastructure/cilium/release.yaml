@@ -140,11 +140,11 @@ spec:
         enabled: false  # Enable when you have Prometheus Operator
 
     # Enable encryption (WireGuard - very cool!)
-    # Commented out for now, but you can enable this for transparent encryption!
-    # encryption:
-    #   enabled: true
-    #   type: wireguard
-    #   nodeEncryption: false
+    # Transparent node-to-node encryption with zero overhead!
+    encryption:
+      enabled: true
+      type: wireguard
+      nodeEncryption: false
 
     # Resource limits (adjust based on your Pi cluster)
     resources:
