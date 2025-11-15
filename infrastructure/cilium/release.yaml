@@ -1,0 +1,176 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: cilium
+  namespace: flux-system
+spec:
+  interval: 30m
+  targetNamespace: kube-system
+  chart:
+    spec:
+      chart: cilium
+      version: "1.16.x"  # Use latest 1.16.x version
+      sourceRef:
+        kind: HelmRepository
+        name: cilium
+        namespace: flux-system
+  install:
+    createNamespace: false
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    # Talos-specific requirements
+    securityContext:
+      capabilities:
+        ciliumAgent:
+          # Remove SYS_MODULE - Talos doesn't allow loading kernel modules from pods
+          - CHOWN
+          - KILL
+          - NET_ADMIN
+          - NET_RAW
+          - IPC_LOCK
+          - SYS_ADMIN
+          - SYS_RESOURCE
+          - DAC_OVERRIDE
+          - FOWNER
+          - SETGID
+          - SETUID
+        cleanCiliumState:
+          - NET_ADMIN
+          - SYS_ADMIN
+          - SYS_RESOURCE
+
+    # Cgroup configuration for Talos
+    cgroup:
+      autoMount:
+        enabled: false
+      hostRoot: /sys/fs/cgroup
+
+    # IPAM configuration (required for Talos)
+    ipam:
+      mode: kubernetes
+
+    # KubePrism configuration (Talos replaces kube-proxy)
+    k8sServiceHost: localhost
+    k8sServicePort: 7445
+
+    # Disable kube-proxy replacement features on control plane to work with KubePrism
+    kubeProxyReplacement: true
+
+    # Enable Hubble for observability (the fun stuff!)
+    hubble:
+      enabled: true
+      metrics:
+        enabled:
+          - dns:query
+          - drop
+          - tcp
+          - flow
+          - icmp
+          - http
+        serviceMonitor:
+          enabled: false  # Enable when you install Prometheus
+        dashboards:
+          enabled: false  # Enable when you install Grafana
+
+      relay:
+        enabled: true
+        rollOutPods: true
+
+      ui:
+        enabled: true
+        rollOutPods: true
+        ingress:
+          enabled: false  # Configure ingress when you're ready
+
+    # Enable the Cilium Operator
+    operator:
+      rollOutPods: true
+      replicas: 1  # Start with 1, can increase for HA later
+
+    # BGP Control Plane (for advanced networking - can enable later)
+    bgpControlPlane:
+      enabled: false
+
+    # Enable IPv4
+    ipv4:
+      enabled: true
+
+    # Disable IPv6 for now (enable if you need it)
+    ipv6:
+      enabled: false
+
+    # Routing mode
+    routingMode: tunnel
+    tunnelProtocol: vxlan  # or geneve, can experiment!
+
+    # Enable auto-direct node routes for better performance
+    autoDirectNodeRoutes: false  # Set to true if all nodes are in same L2 network
+
+    # Enable bandwidth manager (eBPF-based traffic shaping)
+    bandwidthManager:
+      enabled: true
+      bbr: true
+
+    # Enable local redirect policy
+    localRedirectPolicy: true
+
+    # Enable Cilium's eBPF-based host firewall
+    hostFirewall:
+      enabled: true
+
+    # Enable Cilium's service mesh features (can explore later!)
+    # Note: This is experimental/advanced
+    # loadBalancer:
+    #   algorithm: maglev
+    #   mode: dsr
+
+    # Enable monitoring
+    prometheus:
+      enabled: true
+      serviceMonitor:
+        enabled: false  # Enable when you have Prometheus Operator
+
+    # Enable encryption (WireGuard - very cool!)
+    # Commented out for now, but you can enable this for transparent encryption!
+    # encryption:
+    #   enabled: true
+    #   type: wireguard
+    #   nodeEncryption: false
+
+    # Resource limits (adjust based on your Pi cluster)
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+    # Enable debug mode for learning (can disable in production)
+    debug:
+      enabled: false  # Set to true if you want verbose logging
+
+    # Roll out pods on upgrade
+    rollOutCiliumPods: true
+
+    # Enable L7 proxy (for advanced HTTP/gRPC features)
+    l7Proxy: true
+
+    # Enable node port acceleration
+    nodePort:
+      enabled: true
+
+    # Enable external IPs service support
+    externalIPs:
+      enabled: true
+
+    # Enable session affinity
+    sessionAffinity: true
+
+    # Configure policy enforcement
+    policyEnforcementMode: default  # Can be 'default', 'always', or 'never'
