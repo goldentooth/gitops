@@ -1,0 +1,32 @@
+---
+# Flux Kustomization for PKI foundations
+# This deploys cert-manager, step-ca, and step-issuer
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: pki-foundations
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./gitops/infrastructure/pki/00-foundations
+  prune: true
+  wait: true
+  # Health checks - wait for all HelmReleases to be ready
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2beta1
+      kind: HelmRelease
+      name: cert-manager
+      namespace: flux-system
+    - apiVersion: helm.toolkit.fluxcd.io/v2beta1
+      kind: HelmRelease
+      name: step-ca
+      namespace: flux-system
+    - apiVersion: helm.toolkit.fluxcd.io/v2beta1
+      kind: HelmRelease
+      name: step-issuer
+      namespace: flux-system
