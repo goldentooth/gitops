@@ -40,6 +40,10 @@ spec:
       address: :9000
       dns: step-ca.goldentooth.net,step-ca.step-ca.svc.cluster.local
       url: https://step-ca.goldentooth.net
+      # Database configuration - use emptyDir for learning cluster
+      db:
+        enabled: true
+        persistent: false
 
     # Bootstrap configuration - auto-generate CA with JWK provisioner on first run
     bootstrap:
@@ -95,8 +99,3 @@ spec:
         memory: 64Mi
       limits:
         memory: 256Mi
-
-    # Persistence - use emptyDir for learning cluster
-    # If CA is lost, we just regenerate - it's all in Git!
-    persistence:
-      enabled: false
