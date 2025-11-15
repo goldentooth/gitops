@@ -3,3 +3,4 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - 00-foundations/flux-kustomization.yaml
+  - 01-pki-config/flux-kustomization.yaml
