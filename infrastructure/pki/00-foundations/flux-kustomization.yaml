@@ -13,7 +13,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./gitops/infrastructure/pki/00-foundations
+  path: ./infrastructure/pki/00-foundations
   prune: true
   wait: true
   # Health checks - wait for all HelmReleases to be ready
