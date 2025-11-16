@@ -1,0 +1,43 @@
+---
+# Canary certificate for continuous renewal validation
+# This certificate has a very short lifetime (2 hours) and renews frequently (every hour)
+# to ensure the certificate issuance and renewal path is always working.
+#
+# If this certificate stops renewing, it indicates a problem with:
+# - step-ca availability
+# - StepClusterIssuer configuration
+# - CertificateRequestPolicy approval
+# - cert-manager operation
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: canary-certificate
+  namespace: cert-test
+spec:
+  # Secret where the certificate will be stored
+  secretName: canary-tls-secret
+
+  # Short certificate duration (2 hours) to force frequent renewals
+  duration: 2h
+
+  # Renew certificate when half the lifetime has passed (1 hour)
+  # This means the certificate will be renewed every hour
+  renewBefore: 1h
+
+  # Subject information
+  subject:
+    organizations:
+      - Goldentooth
+
+  # Common name
+  commonName: canary.goldentooth.local
+
+  # DNS SANs (Subject Alternative Names)
+  dnsNames:
+    - canary.goldentooth.local
+
+  # Issuer reference - uses StepClusterIssuer
+  issuerRef:
+    name: step-ca
+    kind: StepClusterIssuer
+    group: certmanager.step.sm

@@ -16,15 +16,24 @@ spec:
         - "*.goldentooth.local"
         - "*.goldentooth.net"
         - "*.svc.cluster.local"
-    # Allow any IP address
+        # Allow namespaced service DNS names (e.g., service.namespace.svc.cluster.local)
+        - "*.*.svc.cluster.local"
+    # Allow only internal cluster IP addresses (10.* range)
     ipAddresses:
       values:
-        - "*"
-    # Allow Goldentooth organization
+        - "10.*"
+    # Allow only Goldentooth organization
     subject:
       organizations:
         values:
-          - "*"
+          - "Goldentooth"
+
+  # Enforce certificate duration limits
+  constraints:
+    # Maximum certificate lifetime: 24 hours
+    maxDuration: 24h
+    # Minimum certificate lifetime: 5 minutes
+    minDuration: 5m
 
   # Match requests from cert-manager for step-ca issuer
   selector:

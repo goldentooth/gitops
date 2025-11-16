@@ -44,6 +44,11 @@ spec:
       db:
         enabled: true
         persistent: false
+      # Explicit certificate lifetime claims
+      claims:
+        defaultTLSCertDuration: 24h
+        maxTLSCertDuration: 24h
+        minTLSCertDuration: 5m
 
     # Bootstrap configuration - auto-generate CA with JWK provisioner on first run
     bootstrap:
