@@ -7,8 +7,8 @@ kind: StepClusterIssuer
 metadata:
   name: step-ca
 spec:
-  # step-ca URL
-  url: https://step-ca.step-ca.svc.cluster.local
+  # step-ca URL (using the full service name from the Helm chart)
+  url: https://step-ca-step-ca-step-certificates.step-ca.svc.cluster.local
 
   # CA root certificate (base64 encoded PEM)
   # NOTE: This is generated during bootstrap. If step-ca is recreated,
