@@ -20,6 +20,11 @@ spec:
     ipAddresses:
       values:
         - "*"
+    # Allow Goldentooth organization
+    subject:
+      organizations:
+        values:
+          - "*"
 
   # Match requests from cert-manager for step-ca issuer
   selector:
