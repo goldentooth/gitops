@@ -1,0 +1,34 @@
+---
+# StepClusterIssuer for step-ca using JWK provisioner
+# This allows any namespace to request certificates from step-ca
+# using the admin JWK provisioner created during bootstrap
+apiVersion: certmanager.step.sm/v1beta1
+kind: StepClusterIssuer
+metadata:
+  name: step-ca
+spec:
+  # step-ca URL
+  url: https://step-ca.step-ca.svc.cluster.local
+
+  # CA root certificate (base64 encoded)
+  # This is mounted from the certs ConfigMap
+  caBundleSecretRef:
+    name: step-ca-root-ca
+    key: root_ca.crt
+
+  # JWK Provisioner configuration
+  provisioner:
+    # Provisioner name from bootstrap
+    name: admin
+
+    # Key ID from bootstrap ConfigMap
+    # NOTE: This is generated during bootstrap. If step-ca is recreated,
+    # update this value by running:
+    # kubectl get configmap -n step-ca step-ca-step-ca-step-certificates-config \
+    #   -o jsonpath='{.data.ca\.json}' | jq -r '.authority.provisioners[0].key.kid'
+    kid: gNmIYw4NLWUVXHBpt4UcewBXd2olt1fLFC241p1IyCE
+
+    # Reference to provisioner password secret
+    passwordRef:
+      name: step-ca-step-ca-step-certificates-provisioner-password
+      key: password

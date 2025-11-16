@@ -1,0 +1,26 @@
+---
+# Flux Kustomization for PKI issuers
+# Creates ClusterIssuers after ACME provisioner is configured
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: pki-issuers
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./infrastructure/pki/02-issuers
+  prune: true
+  wait: true
+  # Depend on PKI foundations being ready
+  dependsOn:
+    - name: pki-foundations
+  # Health check - wait for StepClusterIssuer to be ready
+  healthChecks:
+    - apiVersion: certmanager.step.sm/v1beta1
+      kind: StepClusterIssuer
+      name: step-ca
