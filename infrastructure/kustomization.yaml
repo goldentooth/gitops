@@ -7,4 +7,6 @@ resources:
   - external-dns
   - nvidia
   - pki
+  - local-path-provisioner
+  - kubevirt
 patches:

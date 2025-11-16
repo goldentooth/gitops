@@ -1,0 +1,63 @@
+---
+# Example VM: Ubuntu imported from cloud image
+# This demonstrates the "golden image" pattern
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: ubuntu-test-vm
+  namespace: kubevirt
+  labels:
+    app: test-vm
+    os: ubuntu
+spec:
+  running: false  # Set to true to start VM
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: ubuntu-test-vm
+    spec:
+      domain:
+        devices:
+          disks:
+            - name: containerdisk
+              disk:
+                bus: virtio
+            - name: cloudinitdisk
+              disk:
+                bus: virtio
+          interfaces:
+            - name: default
+              masquerade: {}
+        resources:
+          requests:
+            memory: 2Gi
+            cpu: 2
+      networks:
+        - name: default
+          pod: {}
+      volumes:
+        - name: containerdisk
+          dataVolume:
+            name: ubuntu-test-disk
+        - name: cloudinitdisk
+          cloudInitNoCloud:
+            userDataBase64: I2Nsb3VkLWNvbmZpZwpjaHBhc3N3ZDoKICBsaXN0OiB8CiAgICB1YnVudHU6dWJ1bnR1CiAgZXhwaXJlOiBGYWxzZQpzc2hfcHdhdXRoOiBUcnVl
+---
+# DataVolume: Automatically imports Ubuntu cloud image
+# CDI will download and convert this to a PVC
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataVolume
+metadata:
+  name: ubuntu-test-disk
+  namespace: kubevirt
+spec:
+  source:
+    registry:
+      url: docker://quay.io/containerdisks/ubuntu:24.04
+  storage:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 10Gi
+    storageClassName: local-path
