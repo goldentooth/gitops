@@ -30,8 +30,3 @@ spec:
         memory: 32Mi
       limits:
         memory: 128Mi
-
-    # Enable app metrics
-    app:
-      metrics:
-        enabled: true
