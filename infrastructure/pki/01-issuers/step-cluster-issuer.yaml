@@ -33,3 +33,4 @@ spec:
     passwordRef:
       name: step-ca-step-ca-step-certificates-provisioner-password
       key: password
+      namespace: step-ca
