@@ -1,0 +1,27 @@
+---
+# Flux Kustomization for PKI tests
+# Deploys test certificates to validate the PKI infrastructure
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: pki-tests
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./infrastructure/pki/02-tests
+  prune: true
+  wait: true
+  # Depend on issuers being ready
+  dependsOn:
+    - name: pki-issuers
+  # Health check - wait for test certificate to be issued
+  healthChecks:
+    - apiVersion: cert-manager.io/v1
+      kind: Certificate
+      name: test-certificate
+      namespace: cert-test

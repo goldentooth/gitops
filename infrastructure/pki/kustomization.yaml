@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - 00-foundations/flux-kustomization.yaml
   - 01-issuers/flux-kustomization.yaml
+  - 02-tests/flux-kustomization.yaml

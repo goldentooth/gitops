@@ -1,0 +1,41 @@
+---
+# Test certificate to validate step-ca integration with step-issuer
+# This creates a certificate for a test service using the JWK provisioner
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-test
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: test-certificate
+  namespace: cert-test
+spec:
+  # Secret where the certificate will be stored
+  secretName: test-tls-secret
+
+  # Certificate duration (24 hours to match our aggressive policy)
+  duration: 24h
+
+  # Renew certificate when 2/3 of lifetime has passed (16 hours)
+  renewBefore: 8h
+
+  # Subject information
+  subject:
+    organizations:
+      - Goldentooth
+
+  # Common name
+  commonName: test.goldentooth.local
+
+  # DNS SANs (Subject Alternative Names)
+  dnsNames:
+    - test.goldentooth.local
+    - test.goldentooth.net
+
+  # Issuer reference - uses StepClusterIssuer
+  issuerRef:
+    name: step-ca
+    kind: StepClusterIssuer
+    group: certmanager.step.sm
