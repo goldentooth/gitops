@@ -13,7 +13,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./infrastructure/pki/02-issuers
+  path: ./infrastructure/pki/01-issuers
   prune: true
   wait: true
   # Depend on PKI foundations being ready
