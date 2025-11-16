@@ -24,6 +24,6 @@ spec:
   # Match requests from cert-manager for step-ca issuer
   selector:
     issuerRef:
-      - name: step-ca
-        kind: StepClusterIssuer
-        group: certmanager.step.sm
+      name: step-ca
+      kind: StepClusterIssuer
+      group: certmanager.step.sm
