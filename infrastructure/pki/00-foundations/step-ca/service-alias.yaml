@@ -1,0 +1,20 @@
+---
+# Short service name alias for step-ca
+# The step-ca certificate includes "step-ca.step-ca.svc.cluster.local" in its SAN list,
+# but the Helm chart creates a service with a longer name.
+# This Service provides the short DNS name that matches the certificate.
+apiVersion: v1
+kind: Service
+metadata:
+  name: step-ca
+  namespace: step-ca
+spec:
+  type: ClusterIP
+  ports:
+    - name: https
+      port: 443
+      targetPort: 9000
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: step-certificates
+    app.kubernetes.io/instance: step-ca-step-ca
