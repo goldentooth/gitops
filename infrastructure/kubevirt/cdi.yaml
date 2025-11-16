@@ -21,17 +21,17 @@ spec:
       name: cdi-operator
       namespace: cdi
   images:
-    - name: cdi-operator
+    - name: quay.io/kubevirt/cdi-operator
       newTag: v1.63.1-arm64
-    - name: cdi-controller
+    - name: quay.io/kubevirt/cdi-controller
       newTag: v1.63.1-arm64
-    - name: cdi-importer
+    - name: quay.io/kubevirt/cdi-importer
       newTag: v1.63.1-arm64
-    - name: cdi-cloner
+    - name: quay.io/kubevirt/cdi-cloner
       newTag: v1.63.1-arm64
-    - name: cdi-apiserver
+    - name: quay.io/kubevirt/cdi-apiserver
       newTag: v1.63.1-arm64
-    - name: cdi-uploadserver
+    - name: quay.io/kubevirt/cdi-uploadserver
       newTag: v1.63.1-arm64
-    - name: cdi-uploadproxy
+    - name: quay.io/kubevirt/cdi-uploadproxy
       newTag: v1.63.1-arm64
