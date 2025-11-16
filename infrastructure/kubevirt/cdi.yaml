@@ -1,20 +1,5 @@
 ---
-# CDI (Containerized Data Importer)
-# For automatic VM disk image import
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: GitRepository
-metadata:
-  name: cdi
-  namespace: flux-system
-spec:
-  interval: 24h
-  url: https://github.com/kubevirt/containerized-data-importer
-  ref:
-    tag: v1.61.1
-  ignore: |
-    /*
-    !/manifests/
----
+# CDI operator via remote kustomize resources
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -22,11 +7,12 @@ metadata:
   namespace: flux-system
 spec:
   interval: 10m
-  path: ./manifests/release
+  path: ./infrastructure/kubevirt/upstream-cdi
   prune: true
   sourceRef:
     kind: GitRepository
-    name: cdi
+    name: flux-system
+    namespace: flux-system
   dependsOn:
     - name: kubevirt-operator
   healthChecks:

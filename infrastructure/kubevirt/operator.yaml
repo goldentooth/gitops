@@ -1,20 +1,5 @@
 ---
-# KubeVirt Operator
-# Deployed via direct manifest from GitHub releases
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: GitRepository
-metadata:
-  name: kubevirt
-  namespace: flux-system
-spec:
-  interval: 24h
-  url: https://github.com/kubevirt/kubevirt
-  ref:
-    tag: v1.6.3
-  ignore: |
-    /*
-    !/manifests/
----
+# KubeVirt operator via remote kustomize resources
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -22,11 +7,12 @@ metadata:
   namespace: flux-system
 spec:
   interval: 10m
-  path: ./manifests/release
+  path: ./infrastructure/kubevirt/upstream
   prune: true
   sourceRef:
     kind: GitRepository
-    name: kubevirt
+    name: flux-system
+    namespace: flux-system
   healthChecks:
     - apiVersion: apps/v1
       kind: Deployment
