@@ -15,9 +15,9 @@ spec:
   path: ./infrastructure/seaweedfs
   prune: true
   wait: true
-  # Depend on SeaweedFS foundations being ready
+  # Depend on SeaweedFS operator being ready
   dependsOn:
-    - name: seaweedfs-foundations
+    - name: seaweedfs-operator
   # Health check - wait for SeaweedFS custom resource to be ready
   healthChecks:
     - apiVersion: apps/v1
