@@ -8,3 +8,12 @@ metadata:
   labels:
     app.kubernetes.io/name: seaweedfs
     app.kubernetes.io/component: storage
+
+    # PodSecurity: Allow privileged pods in this namespace
+    # Required because:
+    #   1. local-path-provisioner helper pods need hostPath to create PVs
+    #   2. Volume DaemonSet uses hostPath to access /var/mnt/usb (USB SSDs)
+    # Storage system namespaces typically need privileged access
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged
