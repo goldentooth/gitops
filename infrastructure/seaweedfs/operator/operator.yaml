@@ -37,6 +37,9 @@ spec:
     webhook:
       enabled: false
 
+    # Running into length issues with default names, so override here
+    fullNameOverride: seaweedfs-operator
+
     # Resource limits for operator pod (runs on any node)
     resources:
       limits:
