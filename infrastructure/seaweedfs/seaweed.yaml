@@ -1,0 +1,102 @@
+---
+# Seaweed Custom Resource
+# Declaratively defines the SeaweedFS cluster configuration
+# The operator will create StatefulSets, Services, and manage the cluster lifecycle
+apiVersion: seaweed.seaweedfs.com/v1
+kind: Seaweed
+metadata:
+  name: goldentooth-storage
+  namespace: seaweedfs
+spec:
+  # Use official SeaweedFS image (multi-arch, supports ARM64)
+  image: chrislusf/seaweedfs:latest
+
+  # Master Configuration (Raft consensus cluster)
+  # Operator handles all peer discovery, DNS, and configuration automatically!
+  master:
+    replicas: 3
+
+    # Storage for Raft state (operator creates PVCs automatically)
+    volumeClaimTemplate:
+      storageClassName: local-path
+      resources:
+        requests:
+          storage: 10Gi
+
+    # Resource limits for Raspberry Pi cluster
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+    # Configuration arguments
+    config: |
+      # Raft HA with HashiCorp implementation
+      raftHashicorp = true
+      # Default replication: 0 datacenters, 0 racks, 1 replica = 2 total copies
+      defaultReplication = "001"
+
+  # Volume Configuration (DaemonSet on labeled nodes)
+  volume:
+    replicas: 6
+
+    # Schedule ONLY on nodes with USB SSDs
+    # Uses our storage.seaweedfs/volume=true labels from talconfig.yaml
+    nodeSelector:
+      storage.seaweedfs/volume: "true"
+
+    # Use USB SSD storage class
+    # This will provision volumes on /var/mnt/usb (Talos-managed USB SSDs)
+    # The local-path-usb storage class uses node-specific paths for our 6 USB nodes
+    volumeClaimTemplate:
+      storageClassName: local-path-usb  # USB SSD storage!
+      resources:
+        requests:
+          storage: 100Gi  # Each volume server gets 100Gi on USB SSD
+
+    # Resource limits
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+
+  # Filer Configuration (provides S3 API)
+  filer:
+    replicas: 1  # Single replica using LevelDB (our earlier decision)
+
+    # Enable S3 API (for Harbor)
+    s3:
+      enabled: true
+      port: 8333
+
+    # Disable IAM for now (can enable later if needed)
+    iam:
+      enabled: false
+
+    # Storage for filer metadata (directory structure, file mappings)
+    volumeClaimTemplate:
+      storageClassName: local-path
+      resources:
+        requests:
+          storage: 10Gi
+
+    # Resource limits
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+
+    # Configuration for LevelDB backend
+    config: |
+      # LevelDB for metadata (single filer compatible)
+      leveldb2.enabled = true
+      leveldb2.dir = "/data/filerldb2"

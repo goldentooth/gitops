@@ -1,0 +1,47 @@
+---
+# HelmRelease for SeaweedFS Operator
+# Installs the operator that will manage our SeaweedFS cluster
+#
+# IMPORTANT: webhook must be false initially, then changed to true after successful deploy
+# This is due to a certificate creation timing issue in the operator
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: seaweedfs-operator
+  namespace: flux-system
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: seaweedfs-operator
+      version: '0.1.x'  # Use latest 0.1.x version
+      sourceRef:
+        kind: HelmRepository
+        name: seaweedfs-operator
+        namespace: flux-system
+      interval: 1h
+
+  # Install into dedicated operator namespace
+  targetNamespace: seaweedfs-operator
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+
+  values:
+    # STEP 1: Deploy with webhook disabled
+    # After successful deployment, change this to true
+    webhook:
+      enabled: false
+
+    # Resource limits for operator pod (runs on any node)
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
