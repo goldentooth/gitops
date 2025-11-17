@@ -3,14 +3,9 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  # Create namespace with PodSecurity labels
-  # Required for local-path-provisioner and any hostPath volumes
-  - namespace.yaml
-
-  # Operator installation (HelmRepository + HelmRelease)
+  # Namespace, Repository, and Operator installation
   # Installs into seaweedfs-operator namespace
-  - repository.yaml
-  - operator.yaml
+  - operator
 
   # Seaweed custom resource (defines the actual cluster)
   # Operator will create StatefulSets, Services, etc.
