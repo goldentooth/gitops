@@ -1,0 +1,13 @@
+---
+# local-path-storage namespace with PodSecurity labels
+# Required because local-path-provisioner creates helper pods with hostPath volumes
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: local-path-storage
+  labels:
+    # PodSecurity: Allow privileged pods
+    # local-path-provisioner helper pods need hostPath to create directories on nodes
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged
