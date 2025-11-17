@@ -1,0 +1,125 @@
+---
+# SeaweedFS Filer Deployment
+# Provides S3-compatible API and HTTP file access
+# Filer translates human-friendly paths (/bucket/file.jpg) to Volume server file IDs
+#
+# Architecture:
+#   - Single replica (no HA yet, waiting for distributed storage)
+#   - LevelDB for metadata storage (directory structure, file mappings)
+#   - PVC on local-path for LevelDB persistence
+#   - Connects to Masters via DNS for coordination
+#   - Connects to Volumes for actual data storage
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: filer
+  namespace: seaweedfs
+  labels:
+    app.kubernetes.io/name: seaweedfs
+    app.kubernetes.io/component: filer
+spec:
+  # Single replica for now (LevelDB can't be shared across pods)
+  # TODO: Scale to 3 replicas after deploying PostgreSQL or Longhorn
+  replicas: 1
+
+  # Recreate strategy since we can't have multiple pods accessing LevelDB
+  strategy:
+    type: Recreate
+
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: seaweedfs
+      app.kubernetes.io/component: filer
+
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: seaweedfs
+        app.kubernetes.io/component: filer
+    spec:
+      containers:
+        - name: filer
+          image: chrislusf/seaweedfs:latest
+
+          # Filer server command
+          # Connects to Masters and Volumes via DNS (DRY!)
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              exec weed filer \
+                -port=8888 \
+                -master=master.seaweedfs.svc.cluster.local:9333 \
+                -dataCenter=default \
+                -ip=$(POD_IP)
+
+          ports:
+            # HTTP API and S3 API both on port 8888
+            - containerPort: 8888
+              name: filer
+              protocol: TCP
+
+          env:
+            # POD_IP for -ip flag
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+
+          # Resource limits for Raspberry Pi
+          # Filer is I/O bound but also does S3 request parsing
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "200m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+
+          # Mount persistent storage for LevelDB metadata
+          volumeMounts:
+            - name: data
+              mountPath: /data
+
+          # Readiness probe: Filer is ready when it responds to /
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8888
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
+
+          # Liveness probe: Restart if Filer becomes unresponsive
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8888
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: filer-data
+---
+# PersistentVolumeClaim for Filer metadata storage
+# Stores LevelDB database containing directory structure and file mappings
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: filer-data
+  namespace: seaweedfs
+  labels:
+    app.kubernetes.io/name: seaweedfs
+    app.kubernetes.io/component: filer
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      # Filer metadata is small even for millions of files
+      # 10Gi is generous
+      storage: 10Gi

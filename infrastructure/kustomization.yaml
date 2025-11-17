@@ -9,4 +9,5 @@ resources:
   - pki
   - local-path-provisioner
   - kubevirt
+  - seaweedfs
 patches:

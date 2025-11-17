@@ -1,0 +1,132 @@
+---
+# SeaweedFS Master StatefulSet
+# Manages 3 Master servers that form a Raft consensus cluster
+# Each pod gets:
+#   - Stable hostname (master-0, master-1, master-2)
+#   - Stable DNS name (master-N.master.seaweedfs.svc.cluster.local)
+#   - Persistent storage for Raft state (via volumeClaimTemplate)
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: master
+  namespace: seaweedfs
+  labels:
+    app.kubernetes.io/name: seaweedfs
+    app.kubernetes.io/component: master
+spec:
+  # Service name must match the headless service for DNS
+  serviceName: master
+
+  # 3 replicas for Raft quorum (can survive 1 failure)
+  replicas: 3
+
+  # Parallel: all pods start at once (faster)
+  # OrderedReady: pods start one at a time (master-0, then master-1, then master-2)
+  # For Raft, Parallel is fine since they auto-discover each other
+  podManagementPolicy: Parallel
+
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: seaweedfs
+      app.kubernetes.io/component: master
+
+  # volumeClaimTemplates creates a PVC for each pod
+  # master-0 gets "data-master-0", master-1 gets "data-master-1", etc.
+  # These PVCs persist even if pods are deleted/rescheduled
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: local-path
+        resources:
+          requests:
+            # Master metadata is small (Raft logs, cluster state)
+            # 10Gi is plenty for millions of files
+            storage: 10Gi
+
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: seaweedfs
+        app.kubernetes.io/component: master
+    spec:
+      # Allow scheduling on any node (Masters don't need USB SSDs)
+      # Kubernetes will spread them across nodes for HA
+      affinity:
+        # Prefer to spread Masters across different nodes
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: seaweedfs
+                    app.kubernetes.io/component: master
+                topologyKey: kubernetes.io/hostname
+
+      containers:
+        - name: master
+          # Using official SeaweedFS image (multi-arch, includes ARM64)
+          image: chrislusf/seaweedfs:latest
+
+          # Master server command with Raft configuration
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              # Use short hostnames for peers (DNS resolves them)
+              # master-0.master, master-1.master, master-2.master
+              exec weed master \
+                -port=9333 \
+                -mdir=/data \
+                -ip=$(POD_IP) \
+                -peers=master-0.master.seaweedfs.svc.cluster.local:9333,master-1.master.seaweedfs.svc.cluster.local:9333,master-2.master.seaweedfs.svc.cluster.local:9333 \
+                -raftHashicorp=true \
+                -defaultReplication=001
+
+          ports:
+            - containerPort: 9333
+              name: master
+              protocol: TCP
+
+          env:
+            # POD_IP is used for -ip flag so peers know how to reach us
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+
+          # Resource limits appropriate for Raspberry Pi cluster
+          resources:
+            requests:
+              # Master is lightweight (just metadata coordination)
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+
+          # Mount the persistent volume at /data
+          volumeMounts:
+            - name: data
+              mountPath: /data
+
+          # Readiness probe: Master is ready when it responds to /cluster/status
+          # This prevents traffic until Master joins Raft cluster
+          readinessProbe:
+            httpGet:
+              path: /cluster/status
+              port: 9333
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+
+          # Liveness probe: Restart if Master becomes unresponsive
+          livenessProbe:
+            httpGet:
+              path: /cluster/status
+              port: 9333
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10

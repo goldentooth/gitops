@@ -1,0 +1,109 @@
+---
+# SeaweedFS Volume DaemonSet
+# Runs one Volume server pod on each node with USB SSD storage
+# Volume servers:
+#   - Store actual file data in large "volume" files
+#   - Register with Master servers and report capacity
+#   - Handle read/write requests for file data
+#   - Use Talos-managed USB SSD at /var/mnt/usb
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: volume
+  namespace: seaweedfs
+  labels:
+    app.kubernetes.io/name: seaweedfs
+    app.kubernetes.io/component: volume
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: seaweedfs
+      app.kubernetes.io/component: volume
+
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: seaweedfs
+        app.kubernetes.io/component: volume
+    spec:
+      # Only schedule on nodes with USB SSDs
+      # These nodes were labeled in talconfig.yaml
+      nodeSelector:
+        storage.seaweedfs/volume: "true"
+
+      # Allow Volume pods to access host filesystem
+      # Needed to mount /var/mnt/usb (the USB SSD)
+      hostNetwork: false
+
+      containers:
+        - name: volume
+          image: chrislusf/seaweedfs:latest
+
+          # Volume server command
+          # Connects to Masters via DNS service discovery (DRY!)
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              exec weed volume \
+                -port=8080 \
+                -dir=/data \
+                -max=0 \
+                -mserver=master.seaweedfs.svc.cluster.local:9333 \
+                -ip=$(POD_IP) \
+                -publicUrl=$(POD_IP):8080
+
+          ports:
+            - containerPort: 8080
+              name: volume
+              protocol: TCP
+
+          env:
+            # POD_IP for -ip and -publicUrl flags
+            # Tells Master "clients can reach me at this IP"
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+
+          # Resource limits for Raspberry Pi
+          # Volume servers are I/O intensive and need more resources than Masters
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "200m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+
+          # Mount the Talos-managed USB SSD
+          volumeMounts:
+            - name: data
+              mountPath: /data
+
+          # Readiness probe: Volume is ready when it responds to status
+          readinessProbe:
+            httpGet:
+              path: /status
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
+
+          # Liveness probe: Restart if Volume becomes unresponsive
+          livenessProbe:
+            httpGet:
+              path: /status
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+
+      volumes:
+        # hostPath volume pointing to Talos-managed USB SSD
+        # Talos already formatted this as XFS and mounted it at /var/mnt/usb
+        # No init container needed - Talos did the work for us!
+        - name: data
+          hostPath:
+            path: /var/mnt/usb
+            type: Directory
