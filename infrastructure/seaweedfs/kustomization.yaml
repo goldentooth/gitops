@@ -5,9 +5,9 @@ kind: Kustomization
 resources:
   # Namespace, Repository, and Operator installation
   # Installs into seaweedfs-operator namespace
-  - operator
+  - operator/flux-kustomization.yaml
 
   # Seaweed custom resource (defines the actual cluster)
   # Operator will create StatefulSets, Services, etc.
   # Deployed into seaweedfs namespace
-  - seaweed.yaml
+  - flux-kustomization.yaml

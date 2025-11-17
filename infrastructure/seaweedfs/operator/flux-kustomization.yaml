@@ -1,0 +1,24 @@
+---
+# Flux Kustomization for SeaweedFS foundations
+# This deploys the namespace, repository, and operator for SeaweedFS
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: seaweedfs-operator
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./infrastructure/seaweedfs/operator
+  prune: true
+  wait: true
+  # Health checks - wait for the operator HelmRelease to be ready
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2beta1
+      kind: HelmRelease
+      name: seaweedfs-operator
+      namespace: flux-system
