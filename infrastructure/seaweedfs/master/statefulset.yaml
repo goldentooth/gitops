@@ -75,12 +75,11 @@ spec:
             - /bin/sh
             - -ec
             - |
-              # Use short hostnames for peers (DNS resolves them)
-              # master-0.master, master-1.master, master-2.master
+              # Raft masters identify themselves from the -peers list by hostname
+              # Don't use -ip to avoid duplicate registration (would count pod twice!)
               exec weed master \
                 -port=9333 \
                 -mdir=/data \
-                -ip=$(POD_IP) \
                 -peers=master-0.master.seaweedfs.svc.cluster.local:9333,master-1.master.seaweedfs.svc.cluster.local:9333,master-2.master.seaweedfs.svc.cluster.local:9333 \
                 -raftHashicorp=true \
                 -defaultReplication=001
@@ -90,12 +89,9 @@ spec:
               name: master
               protocol: TCP
 
-          env:
-            # POD_IP is used for -ip flag so peers know how to reach us
-            - name: POD_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
+          # No environment variables needed for masters
+          # They identify themselves via hostname from the -peers list
+          env: []
 
           # Resource limits appropriate for Raspberry Pi cluster
           resources:
