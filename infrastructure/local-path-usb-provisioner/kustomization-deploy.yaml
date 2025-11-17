@@ -1,0 +1,54 @@
+---
+# Flux Kustomization that deploys local-path-provisioner for USB
+# Patches the upstream deployment to use a different provisioner name
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: local-path-usb-provisioner
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: ./deploy
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: local-path-usb-provisioner
+    namespace: flux-system
+
+  # Deploy into USB provisioner namespace
+  targetNamespace: local-path-usb-provisioner
+
+  # Patches to customize the provisioner for USB storage
+  patches:
+    # Patch 1: Change provisioner name in Deployment
+    # The PROVISIONER_NAME env var tells the controller what name to use
+    - patch: |-
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: local-path-provisioner
+          namespace: local-path-usb-provisioner
+        spec:
+          template:
+            spec:
+              containers:
+              - name: local-path-provisioner
+                env:
+                - name: PROVISIONER_NAME
+                  value: rancher.io/local-path-usb
+      target:
+        kind: Deployment
+        name: local-path-provisioner
+
+    # Patch 2: Use our custom ConfigMap (defined separately)
+    # This replaces the upstream ConfigMap with our USB paths
+    - patch: |-
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: local-path-config
+          namespace: local-path-usb-provisioner
+        $patch: delete
+      target:
+        kind: ConfigMap
+        name: local-path-config

@@ -1,0 +1,21 @@
+---
+# Kustomization for USB SSD local-path provisioner
+# Deploys a separate provisioner instance for USB storage
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # Namespace with PodSecurity privileges
+  - namespace.yaml
+
+  # GitRepository source (same upstream as SD provisioner)
+  - source.yaml
+
+  # Flux Kustomization with patches for USB provisioner
+  - kustomization-deploy.yaml
+
+  # Our custom ConfigMap with USB node paths
+  - configmap.yaml
+
+  # StorageClass pointing to rancher.io/local-path-usb
+  - storageclass.yaml

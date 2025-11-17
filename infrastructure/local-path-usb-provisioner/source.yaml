@@ -1,0 +1,16 @@
+---
+# GitRepository source for local-path provisioner
+# Same source as SD card provisioner, but we'll patch it for USB
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: local-path-usb-provisioner
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://github.com/rancher/local-path-provisioner
+  ref:
+    tag: v0.0.32
+  ignore: |
+    /*
+    !/deploy/

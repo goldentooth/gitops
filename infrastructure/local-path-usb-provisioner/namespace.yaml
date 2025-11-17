@@ -1,0 +1,13 @@
+---
+# Namespace for USB SSD local-path provisioner
+# Separate instance from the SD card provisioner
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: local-path-usb-provisioner
+  labels:
+    # PodSecurity: privileged required for helper pods that mount hostPath
+    # Helper pods need to create directories on the host filesystem
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged

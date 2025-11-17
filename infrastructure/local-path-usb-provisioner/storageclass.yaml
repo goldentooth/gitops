@@ -1,0 +1,25 @@
+---
+# StorageClass for USB SSD storage
+# Points to the separate USB provisioner instance
+# This ensures USB storage is isolated from SD card storage
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: local-path-usb
+  labels:
+    app.kubernetes.io/name: local-path-provisioner
+    app.kubernetes.io/component: usb-storage
+spec:
+  # IMPORTANT: Different provisioner name than local-path
+  # This points to our USB-specific provisioner instance
+  provisioner: rancher.io/local-path-usb
+
+  # Delete PVs when PVCs are deleted
+  reclaimPolicy: Delete
+
+  # Wait for pod to be scheduled before provisioning
+  # This ensures the volume is created on the correct node
+  volumeBindingMode: WaitForFirstConsumer
+
+  # Allow volume expansion (useful for growing storage needs)
+  allowVolumeExpansion: true
