@@ -9,17 +9,16 @@ metadata:
   labels:
     app.kubernetes.io/name: local-path-provisioner
     app.kubernetes.io/component: usb-storage
-spec:
-  # IMPORTANT: Different provisioner name than local-path
-  # This points to our USB-specific provisioner instance
-  provisioner: rancher.io/local-path-usb
+# IMPORTANT: Different provisioner name than local-path
+# This points to our USB-specific provisioner instance
+provisioner: rancher.io/local-path-usb
 
-  # Delete PVs when PVCs are deleted
-  reclaimPolicy: Delete
+# Delete PVs when PVCs are deleted
+reclaimPolicy: Delete
 
-  # Wait for pod to be scheduled before provisioning
-  # This ensures the volume is created on the correct node
-  volumeBindingMode: WaitForFirstConsumer
+# Wait for pod to be scheduled before provisioning
+# This ensures the volume is created on the correct node
+volumeBindingMode: WaitForFirstConsumer
 
-  # Allow volume expansion (useful for growing storage needs)
-  allowVolumeExpansion: true
+# Allow volume expansion (useful for growing storage needs)
+allowVolumeExpansion: true
