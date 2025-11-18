@@ -3,11 +3,12 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  # Namespace, Repository, and Operator installation
-  # Installs into seaweedfs-operator namespace
+  # SeaweedFS Operator (HelmRelease)
+  # Installs the operator that manages Seaweed custom resources
+  # Creates seaweedfs-operator namespace
   - operator/flux-kustomization.yaml
 
-  # Seaweed custom resource (defines the actual cluster)
-  # Operator will create StatefulSets, Services, etc.
-  # Deployed into seaweedfs namespace
-  - flux-kustomization.yaml
+  # SeaweedFS Cluster (Seaweed custom resource)
+  # The actual distributed storage cluster
+  # Creates master, filer, and volume pods in seaweedfs namespace
+  - cluster/flux-kustomization.yaml
