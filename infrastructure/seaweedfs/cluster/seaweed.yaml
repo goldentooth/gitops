@@ -12,19 +12,11 @@ spec:
   image: chrislusf/seaweedfs:latest
 
   # Master Configuration (Raft consensus cluster)
-  # Operator handles all peer discovery, DNS, and configuration automatically!
+  # Masters use volumeSizeLimitMB for configuration, not PVCs
   master:
     replicas: 3
 
-    # Storage for Raft state (operator creates PVCs automatically)
-    volumeClaimTemplate:
-      storageClassName: local-path
-      resources:
-        requests:
-          storage: 10Gi
-
-    # Resource limits for Raspberry Pi cluster
-    # Note: SeaweedFS CRD uses flattened requests/limits (not nested under 'resources')
+    # CPU/Memory limits for Raspberry Pi cluster
     requests:
       cpu: 100m
       memory: 256Mi
@@ -32,62 +24,49 @@ spec:
       cpu: 500m
       memory: 512Mi
 
-    # Configuration arguments
+    # Raft HA configuration
     config: |
       # Raft HA with HashiCorp implementation
       raftHashicorp = true
       # Default replication: 0 datacenters, 0 racks, 1 replica = 2 total copies
       defaultReplication = "001"
 
-  # Volume Configuration (DaemonSet on labeled nodes)
+  # Volume Configuration (storage servers)
+  # Volumes use requests.storage and storageClassName for PVCs
   volume:
     replicas: 6
 
     # Schedule ONLY on nodes with USB SSDs
-    # Uses our storage.seaweedfs/volume=true labels from talconfig.yaml
     nodeSelector:
       storage.seaweedfs/volume: "true"
 
-    # Use USB SSD storage class
-    # This will provision volumes on /var/mnt/usb (Talos-managed USB SSDs)
-    # The local-path-usb storage class uses node-specific paths for our 6 USB nodes
-    volumeClaimTemplate:
-      storageClassName: local-path-usb  # USB SSD storage!
-      resources:
-        requests:
-          storage: 100Gi  # Each volume server gets 100Gi on USB SSD
-
-    # Resource limits
-    # Note: SeaweedFS CRD uses flattened requests/limits (not nested under 'resources')
+    # Storage configuration for USB SSDs
+    # Note: No volumeClaimTemplate! Use requests.storage + storageClassName
     requests:
+      storage: 100Gi   # Each volume server gets 100Gi on USB SSD
       cpu: 200m
       memory: 512Mi
+
     limits:
       cpu: 1000m
       memory: 2Gi
 
+    # Use USB SSD storage class
+    storageClassName: local-path-usb
+
   # Filer Configuration (provides S3 API)
+  # Filer uses persistence object for PVCs
   filer:
-    replicas: 1  # Single replica using LevelDB (our earlier decision)
+    replicas: 1
 
     # Enable S3 API (for Harbor)
-    # Note: Port is configured via filer command-line args, not in CRD
     s3:
       enabled: true
 
-    # Disable IAM for now (can enable later if needed)
-    # Note: IAM field expects boolean, not object
+    # Disable IAM for now
     iam: false
 
-    # Storage for filer metadata (directory structure, file mappings)
-    volumeClaimTemplate:
-      storageClassName: local-path
-      resources:
-        requests:
-          storage: 10Gi
-
-    # Resource limits
-    # Note: SeaweedFS CRD uses flattened requests/limits (not nested under 'resources')
+    # CPU/Memory limits
     requests:
       cpu: 200m
       memory: 512Mi
@@ -95,8 +74,16 @@ spec:
       cpu: 1000m
       memory: 1Gi
 
-    # Configuration for LevelDB backend
+    # Persistent storage for filer metadata
+    persistence:
+      enabled: true
+      storageClassName: local-path
+      resources:
+        requests:
+          storage: 10Gi
+
+    # LevelDB backend configuration
     config: |
-      # LevelDB for metadata (single filer compatible)
-      leveldb2.enabled = true
-      leveldb2.dir = "/data/filerldb2"
+      [leveldb2]
+      enabled = true
+      dir = "/data/filerldb2"
