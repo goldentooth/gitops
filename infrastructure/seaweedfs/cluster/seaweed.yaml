@@ -24,13 +24,13 @@ spec:
           storage: 10Gi
 
     # Resource limits for Raspberry Pi cluster
-    resources:
-      requests:
-        cpu: 100m
-        memory: 256Mi
-      limits:
-        cpu: 500m
-        memory: 512Mi
+    # Note: SeaweedFS CRD uses flattened requests/limits (not nested under 'resources')
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
 
     # Configuration arguments
     config: |
@@ -58,26 +58,26 @@ spec:
           storage: 100Gi  # Each volume server gets 100Gi on USB SSD
 
     # Resource limits
-    resources:
-      requests:
-        cpu: 200m
-        memory: 512Mi
-      limits:
-        cpu: 1000m
-        memory: 2Gi
+    # Note: SeaweedFS CRD uses flattened requests/limits (not nested under 'resources')
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
 
   # Filer Configuration (provides S3 API)
   filer:
     replicas: 1  # Single replica using LevelDB (our earlier decision)
 
     # Enable S3 API (for Harbor)
+    # Note: Port is configured via filer command-line args, not in CRD
     s3:
       enabled: true
-      port: 8333
 
     # Disable IAM for now (can enable later if needed)
-    iam:
-      enabled: false
+    # Note: IAM field expects boolean, not object
+    iam: false
 
     # Storage for filer metadata (directory structure, file mappings)
     volumeClaimTemplate:
@@ -87,13 +87,13 @@ spec:
           storage: 10Gi
 
     # Resource limits
-    resources:
-      requests:
-        cpu: 200m
-        memory: 512Mi
-      limits:
-        cpu: 1000m
-        memory: 1Gi
+    # Note: SeaweedFS CRD uses flattened requests/limits (not nested under 'resources')
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
 
     # Configuration for LevelDB backend
     config: |
