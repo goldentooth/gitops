@@ -66,6 +66,14 @@ spec:
     # Disable IAM for now
     iam: false
 
+    # Service
+    service:
+      type: LoadBalancer
+      annotations:
+        metallb.io/address-pool: default
+        external-dns.alpha.kubernetes.io/hostname: s3.goldentooth.net
+        external-dns.alpha.kubernetes.io/ttl: "60"
+
     # CPU/Memory limits
     requests:
       cpu: 200m
