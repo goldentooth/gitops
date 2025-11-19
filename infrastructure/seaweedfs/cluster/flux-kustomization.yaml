@@ -15,6 +15,11 @@ spec:
   path: ./infrastructure/seaweedfs/cluster
   prune: true
   wait: true
+  # SOPS decryption for encrypted secrets
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
   # Depend on SeaweedFS operator being ready
   dependsOn:
     - name: seaweedfs-operator
