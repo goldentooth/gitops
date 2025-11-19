@@ -63,8 +63,8 @@ spec:
     s3:
       enabled: true
 
-    # Disable IAM for now
-    iam: false
+    # Enable embedded IAM
+    iam: true
 
     # Service
     service:
