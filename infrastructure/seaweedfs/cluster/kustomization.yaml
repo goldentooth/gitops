@@ -10,3 +10,6 @@ resources:
   # Seaweed custom resource
   # The operator will watch this and create StatefulSets, Services, etc.
   - seaweed.yaml
+
+  # S3 credentials for Filer authentication
+  - s3-credentials.secret.yaml

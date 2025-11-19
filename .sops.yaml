@@ -1,6 +1,6 @@
 creation_rules:
   - path_regex: \.sops\.ya?ml$
     age: age179hfp3n7e42d2fazj09tvjjxpav6ztr3z98g0hwaxpunyfd7rcnqcv0x27
-  - path_regex: \.secrets?\.ya?ml$
+  - path_regex: \.?secrets?\.ya?ml$
     encrypted_regex: ^(data|stringData)$
     age: age179hfp3n7e42d2fazj09tvjjxpav6ztr3z98g0hwaxpunyfd7rcnqcv0x27

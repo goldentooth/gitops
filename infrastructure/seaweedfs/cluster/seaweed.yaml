@@ -59,11 +59,15 @@ spec:
   filer:
     replicas: 1
 
-    # Enable S3 API (for Harbor)
+    # Enable S3 API with authentication
     s3:
       enabled: true
+      # S3 credentials config from SOPS-encrypted secret
+      configSecret:
+        name: seaweedfs-s3-credentials
+        key: config.json
 
-    # Enable embedded IAM
+    # Enable embedded IAM for authentication
     iam: true
 
     # Service
