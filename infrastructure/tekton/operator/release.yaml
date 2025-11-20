@@ -19,10 +19,11 @@ spec:
   targetNamespace: tekton-operator
   install:
     createNamespace: true
-    crds: Skip
+    crds: Create
     remediation:
       retries: 3
   upgrade:
+    crds: CreateReplace
     remediation:
       retries: 3
 
