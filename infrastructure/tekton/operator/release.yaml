@@ -1,0 +1,37 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: tekton-operator
+  namespace: flux-system
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: ./charts/tekton-operator
+      sourceRef:
+        kind: GitRepository
+        name: tekton-operator
+        namespace: flux-system
+      interval: 1h
+
+  # Install into dedicated operator namespace
+  targetNamespace: tekton-operator
+  install:
+    createNamespace: true
+    installCRDs: false
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+
+  values:
+    # Resource limits for operator pod (runs on any node)
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
