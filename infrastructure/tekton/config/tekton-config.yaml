@@ -1,0 +1,27 @@
+apiVersion: operator.tekton.dev/v1alpha1
+kind: TektonConfig
+metadata:
+  name: config
+spec:
+  # Install components into this namespace
+  targetNamespace: tekton-pipelines
+
+  # Enable specific components (instead of using a profile)
+  pipeline:
+    # Core pipeline functionality - REQUIRED
+    performance:
+      replicas: 1  # Single replica controllers (not HA)
+
+    # Pipeline-specific settings
+    options:
+      disabled-affinity-assistant: false  # Keep affinity assistant (your choice!)
+      disable-creds-init: false  # Enable credential injection for git/docker
+
+  trigger:
+    # Event handling (webhooks, EventListeners)
+    performance:
+      replicas: 1
+
+  dashboard:
+    # Web UI for viewing pipelines/runs
+    readonly: false  # Allow creating runs from UI (why not?)

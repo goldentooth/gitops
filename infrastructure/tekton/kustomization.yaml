@@ -7,3 +7,6 @@ resources:
   # Installs the operator that manages Tekton custom resources
   # Creates tekton-operator namespace
   - operator/flux-kustomization.yaml
+
+  # Tekton Configuration (Namespace + Tekton custom resources)
+  - config/flux-kustomization.yaml
