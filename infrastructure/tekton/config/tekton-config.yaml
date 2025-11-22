@@ -1,27 +1,26 @@
+# Based on: https://github.com/tektoncd/operator/blob/v0.77.0/config/crs/kubernetes/config/all/operator_v1alpha1_config_cr.yaml
 apiVersion: operator.tekton.dev/v1alpha1
 kind: TektonConfig
 metadata:
   name: config
 spec:
-  # Install components into this namespace
+  profile: all
   targetNamespace: tekton-pipelines
 
-  # Enable specific components (instead of using a profile)
-  pipeline:
-    # Core pipeline functionality - REQUIRED
-    performance:
-      replicas: 1  # Single replica controllers (not HA)
+  # Disable components that need extra infrastructure
+  result:
+    disabled: true  # Needs PostgreSQL database
+  chain:
+    disabled: true  # Needs signing keys and OCI registry setup
 
-    # Pipeline-specific settings
-    options:
-      disabled-affinity-assistant: false  # Keep affinity assistant (your choice!)
-      disable-creds-init: false  # Enable credential injection for git/docker
-
-  trigger:
-    # Event handling (webhooks, EventListeners)
-    performance:
-      replicas: 1
-
+  # Keep dashboard enabled (it's useful)
   dashboard:
-    # Web UI for viewing pipelines/runs
-    readonly: false  # Allow creating runs from UI (why not?)
+    readonly: false
+
+  # Prune old PipelineRuns and TaskRuns
+  pruner:
+    resources:
+      - pipelinerun
+      - taskrun
+    keep: 100
+    schedule: "0 8 * * *"
