@@ -1,6 +1,6 @@
 ---
-# Flux Kustomization that installs the Tekton Operator from upstream manifests
-# Uses the official tektoncd/operator repo instead of the buggy Helm chart
+# Flux Kustomization that installs the Tekton Operator from vendored release manifest
+# Release downloaded from: https://storage.googleapis.com/tekton-releases/operator/previous/v0.77.0/release.yaml
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -12,13 +12,12 @@ spec:
   timeout: 5m
   sourceRef:
     kind: GitRepository
-    name: tekton-operator
+    name: flux-system
     namespace: flux-system
-  # Official Kubernetes installation path in the tektoncd/operator repo
-  path: ./config/kubernetes/overlays/default
+  path: ./infrastructure/tekton/operator/manifests
   prune: true
   wait: true
-  # Health checks - wait for the operator deployment to be ready
+  # Health checks - wait for the operator deployments to be ready
   healthChecks:
     - apiVersion: apps/v1
       kind: Deployment
