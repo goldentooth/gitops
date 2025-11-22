@@ -1,0 +1,12 @@
+---
+# HelmRepository for SeaweedFS CSI Driver
+# Provides dynamic PersistentVolume provisioning backed by SeaweedFS Filer
+# https://github.com/seaweedfs/seaweedfs-csi-driver
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: seaweedfs-csi-driver
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://seaweedfs.github.io/seaweedfs-csi-driver/helm

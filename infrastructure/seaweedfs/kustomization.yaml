@@ -12,3 +12,8 @@ resources:
   # The actual distributed storage cluster
   # Creates master, filer, and volume pods in seaweedfs namespace
   - cluster/flux-kustomization.yaml
+
+  # SeaweedFS CSI Driver (HelmRelease)
+  # Enables Kubernetes PVC provisioning backed by SeaweedFS
+  # Depends on cluster being ready
+  - csi/flux-kustomization.yaml
