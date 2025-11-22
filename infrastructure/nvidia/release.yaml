@@ -1,0 +1,44 @@
+---
+# HelmRelease for NVIDIA Device Plugin
+# Deploys a DaemonSet that discovers GPUs and exposes them as nvidia.com/gpu resources
+# Only runs on Velaryon (the GPU node) due to nodeSelector and tolerations
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: nvidia-device-plugin
+  namespace: flux-system
+spec:
+  interval: 30m
+  targetNamespace: nvidia
+  chart:
+    spec:
+      chart: nvidia-device-plugin
+      version: "0.18.0"
+      sourceRef:
+        kind: HelmRepository
+        name: nvidia-device-plugin
+        namespace: flux-system
+  install:
+    createNamespace: false
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    # Use Talos's NVIDIA runtime (required for GPU access in containers)
+    runtimeClassName: nvidia
+
+    # Only run on the GPU node (Velaryon)
+    nodeSelector:
+      role: gpu
+
+    # Tolerate the GPU taint so the plugin can schedule on Velaryon
+    tolerations:
+      - key: gpu
+        operator: Equal
+        value: "true"
+        effect: NoSchedule
+      # Keep the default critical addons toleration
+      - key: CriticalAddonsOnly
+        operator: Exists

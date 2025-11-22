@@ -1,0 +1,12 @@
+---
+# HelmRepository for NVIDIA Kubernetes Device Plugin
+# This chart deploys a DaemonSet that advertises GPUs to the K8s scheduler
+# https://github.com/NVIDIA/k8s-device-plugin
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: nvidia-device-plugin
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://nvidia.github.io/k8s-device-plugin
