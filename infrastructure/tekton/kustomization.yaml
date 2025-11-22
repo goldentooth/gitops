@@ -8,5 +8,7 @@ resources:
   # Creates tekton-operator namespace
   - operator/flux-kustomization.yaml
 
-  # Tekton Configuration (Namespace + Tekton custom resources)
+  # Tekton Configuration (TektonConfig)
+  # Configures Pipeline, Trigger, Dashboard components
+  # Creates tekton-pipelines namespace
   - config/flux-kustomization.yaml
