@@ -1,0 +1,23 @@
+---
+# Separate LoadBalancer service for Tekton Dashboard
+# The operator manages its own ClusterIP service; this exposes it externally
+apiVersion: v1
+kind: Service
+metadata:
+  name: tekton-dashboard-lb
+  namespace: tekton-pipelines
+  annotations:
+    # External DNS will pick this up and create the DNS record
+    external-dns.alpha.kubernetes.io/hostname: tekton-dashboard.goldentooth.net
+  labels:
+    app: tekton-dashboard
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: dashboard
+    app.kubernetes.io/component: dashboard
+  ports:
+    - name: http
+      port: 80
+      targetPort: 9097
+      protocol: TCP
