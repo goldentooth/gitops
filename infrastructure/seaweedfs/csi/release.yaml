@@ -29,18 +29,7 @@ spec:
     # Port 8888 is the Filer HTTP/gRPC endpoint
     seaweedfsFiler: "goldentooth-storage-filer.seaweedfs:8888"
 
-    # StorageClass configuration
-    storageClass:
-      name: seaweedfs
-      # Don't make it the default - let local-path remain default
-      defaultClass: false
-
-    # Controller runs on any node (doesn't need GPU)
-    controller:
-      replicas: 1
-
-    # Node plugin runs on all nodes (DaemonSet)
-    # Uses OnDelete update strategy to avoid breaking existing mounts
-    node:
-      updateStrategy:
-        type: OnDelete
+    # StorageClass: uses name "seaweedfs"
+    storageClassName: seaweedfs
+    # Don't make it the cluster default
+    isDefaultStorageClass: false
