@@ -42,3 +42,9 @@ spec:
       # Keep the default critical addons toleration
       - key: CriticalAddonsOnly
         operator: Exists
+
+    # Time-slicing configuration
+    # References ConfigMap that defines how to slice the GPU
+    config:
+      name: nvidia-device-plugin-config
+      default: config.yaml

@@ -1,0 +1,19 @@
+---
+# Time-slicing configuration for NVIDIA Device Plugin
+# Allows multiple pods to share a single physical GPU via context-switching
+# https://github.com/NVIDIA/k8s-device-plugin#shared-access-to-gpus-with-cuda-time-slicing
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nvidia-device-plugin-config
+  namespace: nvidia
+data:
+  # 4 replicas = 1 physical GPU advertised as 4 virtual GPUs
+  # Pods requesting nvidia.com/gpu: 1 each get time-sliced access
+  config.yaml: |
+    version: v1
+    sharing:
+      timeSlicing:
+        resources:
+          - name: nvidia.com/gpu
+            replicas: 4
