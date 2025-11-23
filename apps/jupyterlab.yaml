@@ -1,0 +1,18 @@
+---
+# Flux Kustomization for JupyterLab GPU workbench
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: jupyterlab
+  namespace: flux-system
+spec:
+  interval: 30m0s
+  path: ./apps/jupyterlab
+  prune: true
+  retryInterval: 2m0s
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  targetNamespace: jupyterlab
+  timeout: 3m0s
+  wait: true

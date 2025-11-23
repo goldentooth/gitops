@@ -1,0 +1,88 @@
+---
+# JupyterLab deployment with GPU support
+# Runs on Velaryon with RTX 2070 Super
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jupyterlab
+  namespace: jupyterlab
+spec:
+  # Single replica - one GPU workstation
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jupyterlab
+  template:
+    metadata:
+      labels:
+        app: jupyterlab
+    spec:
+      # Use NVIDIA container runtime (required for GPU access on Talos)
+      runtimeClassName: nvidia
+
+      # Schedule only on GPU node
+      nodeSelector:
+        role: gpu
+
+      # Tolerate the GPU taint
+      tolerations:
+        - key: gpu
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
+
+      # Run as root to avoid permission issues with CUDA
+      securityContext:
+        fsGroup: 0
+
+      containers:
+        - name: jupyterlab
+          # gpu-jupyter: CUDA + PyTorch + TensorFlow + JupyterLab
+          # CUDA 12.0 is compatible with driver 535.x
+          image: cschranz/gpu-jupyter:v1.7_cuda-12.0_ubuntu-22.04_python-only
+          ports:
+            - name: http
+              containerPort: 8888
+              protocol: TCP
+          env:
+            # Disable authentication for local cluster use
+            # TODO: Add proper auth for production
+            - name: JUPYTER_TOKEN
+              value: ""
+            - name: JUPYTER_ENABLE_LAB
+              value: "yes"
+            # Ensure GPU is visible
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "all"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "compute,utility"
+          resources:
+            requests:
+              cpu: "1"
+              memory: "4Gi"
+              nvidia.com/gpu: "1"
+            limits:
+              cpu: "8"
+              memory: "24Gi"
+              nvidia.com/gpu: "1"
+          volumeMounts:
+            - name: workspace
+              mountPath: /home/jovyan/work
+          # Health checks - JupyterLab serves on /lab
+          livenessProbe:
+            httpGet:
+              path: /lab
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /lab
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+      volumes:
+        - name: workspace
+          persistentVolumeClaim:
+            claimName: jupyterlab-workspace

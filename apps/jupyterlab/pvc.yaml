@@ -1,0 +1,16 @@
+---
+# Persistent storage for JupyterLab workspace
+# Notebooks and data persist across pod restarts via SeaweedFS
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jupyterlab-workspace
+  namespace: jupyterlab
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      # 50Gi workspace for notebooks, datasets, model checkpoints
+      storage: 50Gi

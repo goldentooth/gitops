@@ -5,4 +5,5 @@ resources:
   - httpbin.yaml
   - metallb.yaml
   - podinfo.yaml
+  - jupyterlab.yaml
 patches: []

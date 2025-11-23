@@ -1,0 +1,20 @@
+---
+# Service to expose JupyterLab
+apiVersion: v1
+kind: Service
+metadata:
+  name: jupyterlab
+  namespace: jupyterlab
+  annotations:
+    # External DNS will create jupyterlab.goldentooth.net
+    external-dns.alpha.kubernetes.io/hostname: jupyterlab.goldentooth.net
+    external-dns.alpha.kubernetes.io/ttl: "60"
+spec:
+  type: LoadBalancer
+  selector:
+    app: jupyterlab
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP
