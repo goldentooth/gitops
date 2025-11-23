@@ -19,3 +19,6 @@ resources:
 
   # StorageClass pointing to rancher.io/local-path-usb
   - storageclass.yaml
+
+  # Explicit ClusterRoleBinding for this provisioner
+  - rbac-fix.yaml

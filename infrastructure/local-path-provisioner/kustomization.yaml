@@ -4,3 +4,4 @@ resources:
   - namespace.yaml
   - source.yaml
   - kustomization-deploy.yaml
+  - rbac-fix.yaml
