@@ -45,10 +45,12 @@ spec:
               containerPort: 8888
               protocol: TCP
           env:
-            # Disable authentication for local cluster use
-            # TODO: Add proper auth for production
+            # Token from SOPS-encrypted secret
             - name: JUPYTER_TOKEN
-              value: ""
+              valueFrom:
+                secretKeyRef:
+                  name: jupyterlab-auth
+                  key: token
             - name: JUPYTER_ENABLE_LAB
               value: "yes"
             # Ensure GPU is visible

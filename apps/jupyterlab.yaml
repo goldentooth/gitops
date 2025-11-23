@@ -16,3 +16,8 @@ spec:
   targetNamespace: jupyterlab
   timeout: 3m0s
   wait: true
+  # SOPS decryption for encrypted secrets
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
