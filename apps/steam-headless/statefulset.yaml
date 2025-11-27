@@ -152,6 +152,9 @@ spec:
 
           # Security context for container operations
           securityContext:
+            # Disable seccomp filtering - Steam needs unrestricted syscalls
+            seccompProfile:
+              type: Unconfined
             capabilities:
               add:
                 - NET_ADMIN   # Network configuration
