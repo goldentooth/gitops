@@ -20,6 +20,10 @@ spec:
       # Use NVIDIA container runtime (required for GPU access on Talos)
       runtimeClassName: nvidia
 
+      # Use host IPC namespace - Steam needs this for shared memory segments
+      # Without this, mmap() calls fail when creating IPC shared memory
+      hostIPC: true
+
       # Schedule only on GPU node
       nodeSelector:
         role: gpu
@@ -122,7 +126,7 @@ spec:
             - name: ENABLE_STEAM
               value: "true"  # Auto-start Steam on container launch
             - name: STEAM_ARGS
-              value: "-silent"  # Start minimized
+              value: ""  # Start with GUI visible (not silent)
 
             # === Optional Features ===
             - name: ENABLE_WOL_POWER_MANAGER
@@ -149,6 +153,11 @@ spec:
             # Game library storage
             - name: steam-games
               mountPath: /mnt/games
+
+            # Shared memory (equivalent to Docker's shm_size)
+            # Steam uses /dev/shm extensively for IPC
+            - name: dshm
+              mountPath: /dev/shm
 
           # Security context for container operations
           securityContext:
@@ -183,3 +192,9 @@ spec:
         - name: steam-games
           persistentVolumeClaim:
             claimName: steam-games
+        # Shared memory volume (RAM-backed) - gives 2Gi for /dev/shm
+        # Steam needs this for shared memory segments used by IPC
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi
