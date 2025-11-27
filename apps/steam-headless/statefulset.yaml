@@ -166,6 +166,7 @@ spec:
 
           # Security context for container operations
           securityContext:
+            privileged: true
             # Disable seccomp filtering - Steam needs unrestricted syscalls
             seccompProfile:
               type: Unconfined
