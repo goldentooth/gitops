@@ -1,0 +1,30 @@
+---
+# PersistentVolumeClaim for Steam home directory
+# Contains Steam config, SSFN authentication files, saves, etc.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: steam-home
+  namespace: steam-headless
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path  # NVMe storage on velaryon
+  resources:
+    requests:
+      storage: 50Gi
+---
+# PersistentVolumeClaim for game library
+# Where Steam actually installs games
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: steam-games
+  namespace: steam-headless
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 500Gi  # Games are big!
