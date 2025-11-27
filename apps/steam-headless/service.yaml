@@ -6,6 +6,10 @@ kind: Service
 metadata:
   name: steam-headless
   namespace: steam-headless
+  annotations:
+    # External DNS will create steam-headless.goldentooth.net
+    external-dns.alpha.kubernetes.io/hostname: steam-headless.goldentooth.net
+    external-dns.alpha.kubernetes.io/ttl: "60"
 spec:
   type: LoadBalancer  # Get an external IP from MetalLB
   selector:
