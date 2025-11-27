@@ -92,6 +92,10 @@ spec:
             - name: __GLX_VENDOR_LIBRARY_NAME
               value: "nvidia"
 
+            # === Input Device Configuration ===
+            - name: SDL_JOYSTICK_DEVICE
+              value: "/dev/input/event8"
+
             # === Display Configuration ===
             - name: DISPLAY
               value: ":55"
