@@ -6,5 +6,4 @@ resources:
   - metallb.yaml
   - podinfo.yaml
   - jupyterlab.yaml
-  - steam-headless.yaml
 patches: []
