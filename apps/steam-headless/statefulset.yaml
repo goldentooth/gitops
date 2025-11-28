@@ -24,6 +24,10 @@ spec:
       # Without this, mmap() calls fail when creating IPC shared memory
       hostIPC: true
 
+      # Pod-level security context
+      securityContext:
+        fsGroup: 1000  # Ensures volume files are accessible by UID 1000
+
       # Schedule only on GPU node
       nodeSelector:
         role: gpu
@@ -93,11 +97,10 @@ spec:
               value: "nvidia"
 
             # === User/Group Configuration ===
-            # Run as root to access input devices (temporary test)
             - name: PUID
-              value: "0"
+              value: "1000"
             - name: PGID
-              value: "0"
+              value: "1000"
             - name: UMASK
               value: "000"
 
