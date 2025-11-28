@@ -92,6 +92,15 @@ spec:
             - name: __GLX_VENDOR_LIBRARY_NAME
               value: "nvidia"
 
+            # === User/Group Configuration ===
+            # Run as root to access input devices (temporary test)
+            - name: PUID
+              value: "0"
+            - name: PGID
+              value: "0"
+            - name: UMASK
+              value: "000"
+
             # === Input Device Configuration ===
             - name: SDL_JOYSTICK_DEVICE
               value: "/dev/input/event8"
