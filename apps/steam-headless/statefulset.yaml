@@ -163,10 +163,10 @@ spec:
             - name: dshm
               mountPath: /dev/shm
 
-            # Sunshine needs this to create virtual input devices (controllers, keyboard, mouse)
-            # Use hostPath volume type with CharDevice
-            - name: dev-uinput
-              mountPath: /dev/uinput
+            # Mount entire /dev/input directory so Steam can discover input devices
+            # Sunshine creates virtual devices here, Steam needs to see the whole directory
+            - name: input-devices
+              mountPath: /dev/input
 
           # Security context for container operations
           securityContext:
@@ -209,8 +209,9 @@ spec:
             medium: Memory
             sizeLimit: 2Gi
 
-        # Host device for uinput (virtual input devices)
-        - name: dev-uinput
+        # Host /dev/input directory - contains all input devices
+        # Sunshine creates virtual devices here, Steam reads from here
+        - name: input-devices
           hostPath:
-            path: /dev/uinput
-            type: CharDevice
+            path: /dev/input
+            type: Directory
