@@ -1,13 +1,13 @@
 ---
-# TLS certificate for Harbor using Step-CA
+# TLS certificate for Docker Registry using Step-CA
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: harbor-tls
-  namespace: harbor
+  name: registry-tls
+  namespace: docker-registry
 spec:
-  # Secret where Harbor will read the certificate
-  secretName: harbor-tls
+  # Secret where Registry will read the certificate
+  secretName: registry-tls
 
   # Certificate duration (24 hours)
   duration: 24h
@@ -21,11 +21,11 @@ spec:
       - Goldentooth
 
   # Common name
-  commonName: harbor.goldentooth.net
+  commonName: registry.goldentooth.net
 
   # DNS SANs
   dnsNames:
-    - harbor.goldentooth.net
+    - registry.goldentooth.net
 
   # Issuer reference
   issuerRef:

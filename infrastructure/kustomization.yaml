@@ -12,5 +12,5 @@ resources:
   - kubevirt
   - seaweedfs
   - tekton
-  - harbor
+  - docker-registry
 patches:
