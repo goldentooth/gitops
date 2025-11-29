@@ -1,0 +1,157 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: harbor
+  namespace: flux-system
+spec:
+  interval: 30m
+  targetNamespace: harbor
+  chart:
+    spec:
+      chart: harbor
+      version: "1.15.x"  # Use latest 1.15.x version
+      sourceRef:
+        kind: HelmRepository
+        name: harbor
+        namespace: flux-system
+  install:
+    createNamespace: false
+    crds: Create
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  values:
+    # External access configuration
+    expose:
+      type: loadBalancer
+      tls:
+        enabled: true
+        # Use cert-manager generated certificate
+        certSource: secret
+        secret:
+          secretName: harbor-tls
+      loadBalancer:
+        # Service annotations for external-dns
+        annotations:
+          external-dns.alpha.kubernetes.io/hostname: harbor.goldentooth.net
+        # Expose HTTPS port
+        ports:
+          https: 443
+
+    # External URL for Harbor
+    externalURL: https://harbor.goldentooth.net
+
+    # Persistence configuration
+    persistence:
+      # Use existing storage class for PostgreSQL/Redis
+      persistentVolumeClaim:
+        registry:
+          # Registry uses S3, no PVC needed
+          storageClass: ""
+        database:
+          storageClass: local-path
+          size: 2Gi
+        redis:
+          storageClass: local-path
+          size: 1Gi
+        jobservice:
+          jobLog:
+            storageClass: local-path
+            size: 1Gi
+
+      # Registry storage backend - SeaweedFS S3
+      imageChartStorage:
+        type: s3
+        s3:
+          # SeaweedFS S3 endpoint
+          region: us-east-1  # required but not used by SeaweedFS
+          bucket: harbor-registry
+          # S3 endpoint - pointing to SeaweedFS S3 service
+          regionendpoint: http://seaweedfs-s3.seaweedfs.svc.cluster.local:8333
+          # Credentials from secret
+          existingSecret: harbor-s3-secret
+
+    # Disable Trivy vulnerability scanner
+    trivy:
+      enabled: false
+
+    # Component resource configuration - aggressive limits for homelab
+    portal:
+      resources:
+        requests:
+          memory: 256Mi
+          cpu: 250m
+        limits:
+          memory: 256Mi
+          cpu: 250m
+
+    core:
+      resources:
+        requests:
+          memory: 256Mi
+          cpu: 250m
+        limits:
+          memory: 256Mi
+          cpu: 250m
+
+    jobservice:
+      resources:
+        requests:
+          memory: 256Mi
+          cpu: 250m
+        limits:
+          memory: 256Mi
+          cpu: 250m
+
+    registry:
+      resources:
+        requests:
+          memory: 256Mi
+          cpu: 250m
+        limits:
+          memory: 256Mi
+          cpu: 250m
+
+    database:
+      internal:
+        resources:
+          requests:
+            memory: 256Mi
+            cpu: 250m
+          limits:
+            memory: 256Mi
+            cpu: 250m
+
+    redis:
+      internal:
+        resources:
+          requests:
+            memory: 256Mi
+            cpu: 250m
+          limits:
+            memory: 256Mi
+            cpu: 250m
+
+    nginx:
+      resources:
+        requests:
+          memory: 256Mi
+          cpu: 250m
+        limits:
+          memory: 256Mi
+          cpu: 250m
+
+    # Default admin credentials (change after first login!)
+    harborAdminPassword: "HarborDefaultPassword123"
+
+    # Disable notary (image signing) - not needed for homelab
+    notary:
+      enabled: false
+
+    # Disable metrics for now
+    metrics:
+      enabled: false

@@ -1,0 +1,34 @@
+---
+# TLS certificate for Harbor using Step-CA
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: harbor-tls
+  namespace: harbor
+spec:
+  # Secret where Harbor will read the certificate
+  secretName: harbor-tls
+
+  # Certificate duration (24 hours)
+  duration: 24h
+
+  # Renew when 2/3 of lifetime has passed
+  renewBefore: 8h
+
+  # Subject information
+  subject:
+    organizations:
+      - Goldentooth
+
+  # Common name
+  commonName: harbor.goldentooth.net
+
+  # DNS SANs
+  dnsNames:
+    - harbor.goldentooth.net
+
+  # Issuer reference
+  issuerRef:
+    name: step-ca
+    kind: StepClusterIssuer
+    group: certmanager.step.sm
