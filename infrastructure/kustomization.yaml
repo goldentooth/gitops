@@ -10,6 +10,7 @@ resources:
   - local-path-provisioner
   - local-path-usb-provisioner
   - kubevirt
+  - prometheus-operator
   - seaweedfs
   - tekton
   - docker-registry
