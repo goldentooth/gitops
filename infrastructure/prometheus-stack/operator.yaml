@@ -67,15 +67,15 @@ spec:
     # ==================================================================
     prometheus:
       prometheusSpec:
-        # EPHEMERAL STORAGE: Data stored in tmpfs (RAM-backed)
-        # Metrics disappear on pod restart - perfect for learning!
         storageSpec:
-          emptyDir:
-            medium: Memory  # Uses tmpfs (/dev/shm equivalent)
-            sizeLimit: 2Gi  # Max 2GB of RAM for metrics storage
-
-        # Retention: Keep 6 hours of metrics (irrelevant on restart, but limits RAM usage)
-        retention: 6h
+          volumeClaimTemplate:
+            spec:
+              storageClassName: local-path
+              accessModes: ["ReadWriteOnce"]
+              resources:
+                requests:
+                  storage: 16Gi
+        retention: 7d
 
         # Resources for Prometheus pods
         resources:
@@ -96,11 +96,14 @@ spec:
     # ==================================================================
     alertmanager:
       alertmanagerSpec:
-        # EPHEMERAL STORAGE: Alert state stored in tmpfs
         storage:
-          emptyDir:
-            medium: Memory
-            sizeLimit: 100Mi
+          volumeClaimTemplate:
+            spec:
+              storageClassName: local-path
+              accessModes: ["ReadWriteOnce"]
+              resources:
+                requests:
+                  storage: 1Gi
 
         resources:
           limits:
