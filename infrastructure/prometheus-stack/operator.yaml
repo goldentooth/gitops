@@ -68,6 +68,7 @@ spec:
     prometheus:
       prometheusSpec:
         storageSpec:
+          disableMountSubPath: true
           volumeClaimTemplate:
             spec:
               storageClassName: local-path
@@ -99,6 +100,7 @@ spec:
         storage:
           volumeClaimTemplate:
             spec:
+              disableMountSubPath: true
               storageClassName: local-path
               accessModes: ["ReadWriteOnce"]
               resources:
