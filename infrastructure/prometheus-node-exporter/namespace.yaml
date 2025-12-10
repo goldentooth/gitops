@@ -1,0 +1,13 @@
+---
+# Required because prometheus-node-exporter needs hostPath, hostNetwork, and hostPID
+# to collect host-level metrics (CPU, memory, disk, network at the OS level)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prometheus-node-exporter
+  labels:
+    # PodSecurity: Allow privileged pods
+    # node-exporter DaemonSet needs host access to scrape system metrics
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged

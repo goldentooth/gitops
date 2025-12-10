@@ -11,6 +11,7 @@ resources:
   - local-path-usb-provisioner
   - kubevirt
   - prometheus-stack
+  - prometheus-node-exporter
   - seaweedfs
   - tekton
   - docker-registry
