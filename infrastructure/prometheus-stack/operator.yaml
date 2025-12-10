@@ -145,7 +145,7 @@ spec:
     # (CPU, memory, disk, network at the OS level)
     # ==================================================================
     nodeExporter:
-      enabled: true
+      enabled: false
 
     # ==================================================================
     # KUBE-STATE-METRICS
