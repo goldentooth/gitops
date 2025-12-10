@@ -37,7 +37,7 @@ spec:
           port: 9091
           annotations:
             metallb.io/address-pool: default
-            external-dns.alpha.kubernetes.io/hostname: chaos.services.goldentooth.net
+            external-dns.alpha.kubernetes.io/hostname: chaos-center.goldentooth.net
             external-dns.alpha.kubernetes.io/ttl: "60"
           externalTrafficPolicy: Local
         # Resource limits for Pi cluster
