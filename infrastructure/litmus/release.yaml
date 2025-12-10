@@ -1,0 +1,108 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: litmuschaos
+  namespace: flux-system
+spec:
+  interval: 24h
+  url: https://litmuschaos.github.io/litmus-helm/
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: litmus
+  namespace: litmus
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: litmus
+      version: ">=3.20.0 <4.0.0"
+      sourceRef:
+        kind: HelmRepository
+        name: litmuschaos
+        namespace: flux-system
+      interval: 12h
+  values:
+    # ==================================================================
+    # PORTAL CONFIGURATION
+    # ChaosCenter web UI and API servers
+    # ==================================================================
+    portal:
+      frontend:
+        # Expose frontend via LoadBalancer (MetalLB will assign IP)
+        service:
+          type: LoadBalancer
+          port: 9091
+          annotations:
+            metallb.io/address-pool: default
+            external-dns.alpha.kubernetes.io/hostname: chaos.services.goldentooth.net
+            external-dns.alpha.kubernetes.io/ttl: "60"
+          externalTrafficPolicy: Local
+        # Resource limits for Pi cluster
+        resources:
+          requests:
+            memory: "150Mi"
+            cpu: "125m"
+            ephemeral-storage: "500Mi"
+          limits:
+            memory: "512Mi"
+            cpu: "550m"
+            ephemeral-storage: "1Gi"
+
+      server:
+        graphqlServer:
+          resources:
+            requests:
+              memory: "250Mi"
+              cpu: "225m"
+              ephemeral-storage: "500Mi"
+            limits:
+              memory: "712Mi"
+              cpu: "550m"
+              ephemeral-storage: "1Gi"
+
+        authServer:
+          resources:
+            requests:
+              memory: "250Mi"
+              cpu: "125m"
+              ephemeral-storage: "500Mi"
+            limits:
+              memory: "712Mi"
+              cpu: "550m"
+              ephemeral-storage: "1Gi"
+
+    # ==================================================================
+    # MONGODB CONFIGURATION
+    # Backend database for chaos experiments and results
+    # ==================================================================
+    mongodb:
+      enabled: true
+      # Use default storage class (local-path or whatever you have)
+      persistence:
+        enabled: true
+        size: 10Gi  # Start smaller for Pi cluster
+      # Resource limits for MongoDB
+      resources:
+        requests:
+          memory: "512Mi"
+          cpu: "250m"
+        limits:
+          memory: "1Gi"
+          cpu: "500m"
+
+    # ==================================================================
+    # INGRESS (disabled - using LoadBalancer instead)
+    # ==================================================================
+    ingress:
+      enabled: false
+      # To enable ingress later, set enabled: true and configure:
+      # annotations:
+      #   external-dns.alpha.kubernetes.io/hostname: chaos.services.goldentooth.net
+      # hosts:
+      #   - host: chaos.services.goldentooth.net
+      #     paths:
+      #       - path: /
+      #         pathType: Prefix

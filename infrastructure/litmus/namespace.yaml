@@ -1,0 +1,12 @@
+---
+# litmus namespace for LitmusChaos ChaosCenter
+# Chaos engineering platform for testing Kubernetes resilience
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: litmus
+  labels:
+    # Baseline security - chaos experiments shouldn't need host access
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/audit: baseline
+    pod-security.kubernetes.io/warn: baseline
