@@ -80,6 +80,12 @@ spec:
     # ==================================================================
     mongodb:
       enabled: true
+      # ARM64 image override (Bitnami doesn't support ARM64)
+      # Using official mongo image which has full ARM64 support
+      image:
+        registry: docker.io
+        repository: mongo
+        tag: "8.0"
       # Use default storage class (local-path or whatever you have)
       persistence:
         enabled: true
