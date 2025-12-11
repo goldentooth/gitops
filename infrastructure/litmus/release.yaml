@@ -79,6 +79,7 @@ spec:
     # Backend database for chaos experiments and results
     # ==================================================================
     mongodb:
+      architecture: standalone
       enabled: true
       # ARM64 image override (Bitnami doesn't support ARM64)
       # Using official mongo image which has full ARM64 support
@@ -89,7 +90,7 @@ spec:
       # Use default storage class (local-path or whatever you have)
       persistence:
         enabled: true
-        size: 10Gi  # Start smaller for Pi cluster
+        size: 8Gi
       # Resource limits for MongoDB
       resources:
         requests:
