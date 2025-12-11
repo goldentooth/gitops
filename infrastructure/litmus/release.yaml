@@ -86,7 +86,7 @@ spec:
       image:
         registry: docker.io
         repository: mongo
-        tag: "8.0"
+        tag: "4.4"
       # Use default storage class (local-path or whatever you have)
       persistence:
         enabled: true
