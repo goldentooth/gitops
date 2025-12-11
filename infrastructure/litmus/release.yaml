@@ -82,11 +82,12 @@ spec:
       architecture: standalone
       enabled: true
       # ARM64 image override (Bitnami doesn't support ARM64)
-      # Using official mongo image which has full ARM64 support
+      # Pi 4 only supports MongoDB ≤4.4.18 (requires ARMv8.0-A, not ARMv8.2-A)
+      # Versions ≥5.0 or 4.4.19+ require ARMv8.2-A which Pi 4 doesn't have
       image:
         registry: docker.io
         repository: mongo
-        tag: "4.3"
+        tag: "4.4.18"
       # Use default storage class (local-path or whatever you have)
       persistence:
         enabled: true
