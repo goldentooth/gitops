@@ -136,6 +136,13 @@ spec:
           cpu: 100m
           memory: 128Mi
 
+      service:
+        type: LoadBalancer
+        annotations:
+          metallb.io/address-pool: default
+          external-dns.alpha.kubernetes.io/hostname: grafana.goldentooth.net
+          external-dns.alpha.kubernetes.io/ttl: "60"
+
       # Datasource auto-configured to point to Prometheus in same namespace
       # This is done automatically by the chart
 
