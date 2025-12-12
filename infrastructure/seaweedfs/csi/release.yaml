@@ -25,6 +25,11 @@ spec:
     remediation:
       retries: 3
   values:
+    # Pin CSI driver to specific version instead of :latest
+    # v1.3.6 supports mountEndpoint flag that chart 0.2.3 expects
+    seaweedfsCsiPlugin:
+      image: chrislusf/seaweedfs-csi-driver:v1.3.6
+
     # Filer address - uses the ClusterIP service created by the operator
     # Port 8888 is the Filer HTTP/gRPC endpoint
     seaweedfsFiler: "goldentooth-storage-filer.seaweedfs:8888"
