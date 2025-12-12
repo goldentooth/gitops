@@ -6,7 +6,7 @@ kind: Namespace
 metadata:
   name: litmus
   labels:
-    # Baseline security - chaos experiments shouldn't need host access
-    pod-security.kubernetes.io/enforce: baseline
-    pod-security.kubernetes.io/audit: baseline
-    pod-security.kubernetes.io/warn: baseline
+    # Privileged security context for chaos experiments
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged
