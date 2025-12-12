@@ -69,9 +69,18 @@ spec:
     # MONGODB - PINNED TO VELARYON (x86 node)
     # MongoDB doesn't support ARM64 well, so we run it on the x86 GPU node
     # ==================================================================
+    # ==================================================================
+    # LITMUS CONFIG - Override MongoDB connection for standalone mode
+    # ==================================================================
+    adminConfig:
+      DB_SERVER: "mongodb://litmus-mongodb:27017"
+
+    # ==================================================================
+    # MONGODB CONFIGURATION (continued)
+    # ==================================================================
     mongodb:
       enabled: true
-      architecture: standalone
+      architecture: standalone  # Back to standalone!
 
       # Pin to Velaryon (x86 node) since MongoDB needs x86
       nodeSelector:
