@@ -76,6 +76,10 @@ spec:
       architecture: replicaset
       replicaCount: 1
 
+      # No arbiter needed for single-member replica set
+      arbiter:
+        enabled: false
+
       # Pin to Velaryon (x86 node) since MongoDB needs x86
       nodeSelector:
         kubernetes.io/hostname: velaryon
