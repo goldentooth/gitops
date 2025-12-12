@@ -35,7 +35,7 @@ spec:
     # STEP 1: Deploy with webhook disabled
     # After successful deployment, change this to true
     webhook:
-      enabled: false
+      enabled: true
 
     # Running into length issues with default names, so I override here.
     fullnameOverride: seaweedfs-operator
