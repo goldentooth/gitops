@@ -120,11 +120,14 @@ spec:
     # Visualization and dashboard interface
     # ==================================================================
     grafana:
-      # Admin credentials - CHANGE THESE!
-      adminPassword: "admin"  # TODO: Change this or use a Secret
+      admin:
+        existingSecret: "grafana-admin-credentials"
+        userKey: "user"         # Key in secret containing username
+        passwordKey: "password" # Key in secret containing password
 
       # EPHEMERAL STORAGE: Dashboards/datasources stored in tmpfs
       # You can provision dashboards via ConfigMaps to persist them in GitOps
+
       persistence:
         enabled: false  # No PVC, uses emptyDir by default
 

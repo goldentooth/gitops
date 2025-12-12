@@ -9,3 +9,4 @@ resources:
   # - Node Exporter, Kube-State-Metrics, ServiceMonitors
   - repository.yaml
   - operator.yaml
+  - grafana-admin-secret.yaml
