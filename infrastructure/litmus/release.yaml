@@ -77,8 +77,14 @@ spec:
       nodeSelector:
         kubernetes.io/hostname: velaryon
 
-      # Tolerate the platform taint so MongoDB can run on Velaryon
+      # Tolerate both taints on Velaryon
+      # - gpu taint (even though MongoDB doesn't use GPU)
+      # - platform taint (MongoDB needs x86 architecture)
       tolerations:
+        - key: "gpu"
+          operator: "Equal"
+          value: "true"
+          effect: "NoSchedule"
         - key: "platform"
           operator: "Equal"
           value: "x86"
