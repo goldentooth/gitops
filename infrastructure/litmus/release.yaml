@@ -11,25 +11,100 @@ spec:
 apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
 metadata:
-  name: litmus-operator
+  name: litmus
   namespace: litmus
 spec:
   interval: 30m
   chart:
     spec:
-      chart: kubernetes-chaos
-      version: ">=3.0.0 <4.0.0"
+      chart: litmus
+      version: ">=3.20.0 <4.0.0"
       sourceRef:
         kind: HelmRepository
         name: litmuschaos
         namespace: flux-system
       interval: 12h
   values:
-    operator:
+    # ==================================================================
+    # CHAOSCENTER FRONTEND
+    # ==================================================================
+    portal:
+      frontend:
+        service:
+          type: LoadBalancer
+          port: 9091
+          annotations:
+            metallb.io/address-pool: default
+            external-dns.alpha.kubernetes.io/hostname: chaos-center.goldentooth.net
+            external-dns.alpha.kubernetes.io/ttl: "60"
+          externalTrafficPolicy: Local
+        resources:
+          requests:
+            memory: "150Mi"
+            cpu: "125m"
+          limits:
+            memory: "512Mi"
+            cpu: "550m"
+
+      server:
+        graphqlServer:
+          resources:
+            requests:
+              memory: "250Mi"
+              cpu: "225m"
+            limits:
+              memory: "712Mi"
+              cpu: "550m"
+
+        authServer:
+          resources:
+            requests:
+              memory: "250Mi"
+              cpu: "125m"
+            limits:
+              memory: "712Mi"
+              cpu: "550m"
+
+    # ==================================================================
+    # MONGODB - PINNED TO VELARYON (x86 node)
+    # MongoDB doesn't support ARM64 well, so we run it on the x86 GPU node
+    # ==================================================================
+    mongodb:
+      enabled: true
+      architecture: standalone
+
+      # Pin to Velaryon (x86 node) since MongoDB needs x86
+      nodeSelector:
+        kubernetes.io/hostname: velaryon
+
+      # Tolerate the platform taint so MongoDB can run on Velaryon
+      tolerations:
+        - key: "platform"
+          operator: "Equal"
+          value: "x86"
+          effect: "NoSchedule"
+
+      # Use official Bitnami MongoDB (works fine on x86)
+      image:
+        registry: docker.io
+        repository: bitnami/mongodb
+        tag: "7.0"
+
+      persistence:
+        enabled: true
+        size: 5Gi
+        storageClass: "local-path"
+
       resources:
         requests:
-          memory: "128Mi"
-          cpu: "50m"
-        limits:
-          memory: "256Mi"
+          memory: "512Mi"
           cpu: "250m"
+        limits:
+          memory: "1Gi"
+          cpu: "500m"
+
+    # ==================================================================
+    # INGRESS (disabled - using LoadBalancer)
+    # ==================================================================
+    ingress:
+      enabled: false
