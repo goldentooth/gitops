@@ -12,8 +12,8 @@ resources:
   - kubevirt
   - prometheus-stack
   - prometheus-node-exporter
-  # - litmus
-  # - seaweedfs
+  - litmus
+  - seaweedfs
   - tekton
   - docker-registry
 patches:
