@@ -56,6 +56,10 @@ spec:
               memory: "712Mi"
               cpu: "550m"
 
+          # Pin to Raspberry Pi 5 nodes (armv8.2-a)
+          nodeSelector:
+            cpu.arch: armv8.2-a
+
         authServer:
           resources:
             requests:
@@ -64,6 +68,10 @@ spec:
             limits:
               memory: "712Mi"
               cpu: "550m"
+
+          # Pin to Raspberry Pi 5 nodes (armv8.2-a)
+          nodeSelector:
+            cpu.arch: armv8.2-a
 
     # ==================================================================
     # MONGODB - PINNED TO VELARYON (x86 node)
@@ -80,9 +88,9 @@ spec:
       arbiter:
         enabled: false
 
-      # Pin to Velaryon (x86 node) since MongoDB needs x86
+      # Pin to Raspberry Pi 5 nodes (armv8.2-a)
       nodeSelector:
-        kubernetes.io/hostname: velaryon
+        cpu.arch: armv8.2-a
 
       # Tolerate both taints on Velaryon
       # - gpu taint (even though MongoDB doesn't use GPU)
