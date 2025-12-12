@@ -74,8 +74,8 @@ spec:
             cpu.arch: armv8.2-a
 
     # ==================================================================
-    # MONGODB - PINNED TO VELARYON (x86 node)
-    # MongoDB doesn't support ARM64 well, so we run it on the x86 GPU node
+    # MONGODB - PINNED TO RASPBERRY PI 5 NODES
+    # MongoDB needs ARMv8.2-A CPU instructions (Pi 4 only has ARMv8.0-A)
     # Single-member replica set (not standalone) because Litmus init
     # containers check rs.status()
     # ==================================================================
@@ -88,24 +88,11 @@ spec:
       arbiter:
         enabled: false
 
-      # Pin to Raspberry Pi 5 nodes (armv8.2-a)
+      # Pin to Raspberry Pi 5 nodes (ARMv8.2-A support)
       nodeSelector:
         cpu.arch: armv8.2-a
 
-      # Tolerate both taints on Velaryon
-      # - gpu taint (even though MongoDB doesn't use GPU)
-      # - platform taint (MongoDB needs x86 architecture)
-      tolerations:
-        - key: "gpu"
-          operator: "Equal"
-          value: "true"
-          effect: "NoSchedule"
-        - key: "platform"
-          operator: "Equal"
-          value: "x86"
-          effect: "NoSchedule"
-
-      # Use official Bitnami MongoDB (works fine on x86)
+      # Use official Bitnami MongoDB
       # Using latest tag since Bitnami now only offers latest for free tier
       image:
         registry: docker.io
