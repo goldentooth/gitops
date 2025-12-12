@@ -91,10 +91,11 @@ spec:
           effect: "NoSchedule"
 
       # Use official Bitnami MongoDB (works fine on x86)
+      # Using latest tag since Bitnami now only offers latest for free tier
       image:
         registry: docker.io
         repository: bitnami/mongodb
-        tag: "7.0"
+        tag: "latest"
 
       persistence:
         enabled: true
