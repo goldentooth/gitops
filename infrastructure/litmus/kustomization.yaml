@@ -4,4 +4,5 @@ kind: Kustomization
 
 resources:
   - namespace.yaml
+  - admin-secret.yaml
   - release.yaml
