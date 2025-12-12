@@ -13,7 +13,7 @@ resources:
   - prometheus-stack
   - prometheus-node-exporter
   - litmus
-  # - seaweedfs
+  - seaweedfs
   - tekton
   - docker-registry
 patches:
