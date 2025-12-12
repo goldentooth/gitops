@@ -26,10 +26,9 @@ spec:
       interval: 12h
   values:
     # ==================================================================
-    # ADMIN CREDENTIALS
+    # ADMIN CREDENTIALS - Use existing SOPS-encrypted secret
     # ==================================================================
-    adminConfig:
-      existingSecret: "litmus-admin-credentials"
+    existingSecret: "litmus-admin-credentials"
 
     # ==================================================================
     # CHAOSCENTER FRONTEND
