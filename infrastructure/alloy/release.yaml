@@ -99,12 +99,13 @@ spec:
             }
 
             // Build the path to the container log file
-            // Talos Linux uses /var/log/pods/<namespace>_<pod>_<uid>/<container>/*.log
+            // Kubernetes log path format: /var/log/pods/{namespace}_{pod}_{uid}/{container}/*.log
             rule {
-              source_labels = ["__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
-              target_label  = "__path__"
+              source_labels = ["__meta_kubernetes_namespace", "__meta_kubernetes_pod_name", "__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
               separator     = "/"
-              replacement   = "/var/log/pods/*$1/$2/*.log"
+              regex         = "(.*)/(.*)/(.*)/(.*)"
+              target_label  = "__path__"
+              replacement   = "/var/log/pods/$1_$2_$3/$4/*.log"
             }
           }
 
