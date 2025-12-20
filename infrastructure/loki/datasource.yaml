@@ -16,7 +16,7 @@ data:
       - name: Loki
         type: loki
         uid: loki
-        url: http://loki.monitoring.svc.cluster.local:3100
+        url: http://monitoring-loki.monitoring.svc.cluster.local:3100
         access: proxy
         isDefault: false
         jsonData:

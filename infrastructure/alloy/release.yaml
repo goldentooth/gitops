@@ -116,9 +116,10 @@ spec:
           }
 
           // Ship logs to Loki
+          // Service name is "monitoring-loki" (helm release name prefix)
           loki.write "default" {
             endpoint {
-              url = "http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
+              url = "http://monitoring-loki.monitoring.svc.cluster.local:3100/loki/api/v1/push"
             }
           }
 
