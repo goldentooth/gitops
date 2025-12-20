@@ -1,7 +1,7 @@
 ---
 # HelmRelease for Grafana Alloy
-# Log collection agent running as DaemonSet on every node
-# Collects container logs and ships them to Loki
+# Log collection agent - collects container logs via Kubernetes API and ships to Loki
+# Uses K8s API instead of hostPath mounts (no privileged access needed)
 apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
 metadata:
@@ -25,7 +25,7 @@ spec:
     remediation:
       retries: 3
   upgrade:
-    # 16-node DaemonSet on Raspberry Pis needs more time to roll out
+    # DaemonSet on Raspberry Pis needs more time to roll out
     timeout: 15m
     remediation:
       retries: 3
@@ -34,30 +34,27 @@ spec:
     # ==================================================================
     # ALLOY CONFIGURATION
     # River config defining the log collection pipeline
+    # Uses Kubernetes API to fetch logs (no hostPath needed!)
     # ==================================================================
     alloy:
       configMap:
         content: |
           // ============================================================
           // KUBERNETES LOG COLLECTION PIPELINE
-          // Discovers pods, collects their logs, ships to Loki
+          // Uses Kubernetes API to stream pod logs (no hostPath mount needed)
+          // This approach works with any PodSecurity policy
           // ============================================================
 
           // Discover all pods in the cluster
-          // This provides targets with labels like:
-          //   __meta_kubernetes_namespace
-          //   __meta_kubernetes_pod_name
-          //   __meta_kubernetes_pod_container_name
           discovery.kubernetes "pods" {
             role = "pod"
           }
 
-          // Relabel discovered pods to extract useful labels
-          // These labels will be attached to log streams in Loki
-          discovery.relabel "pod_logs" {
+          // Relabel to extract useful labels for Loki
+          discovery.relabel "pods" {
             targets = discovery.kubernetes.pods.targets
 
-            // Keep only running pods with a container name
+            // Keep only running pods
             rule {
               source_labels = ["__meta_kubernetes_pod_phase"]
               regex         = "Pending|Succeeded|Failed|Unknown"
@@ -82,51 +79,35 @@ spec:
               target_label  = "container"
             }
 
-            // Set the app label from pod labels (if present)
-            rule {
-              source_labels = ["__meta_kubernetes_pod_label_app"]
-              target_label  = "app"
-            }
-
-            // Also try app.kubernetes.io/name
-            rule {
-              source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
-              target_label  = "app"
-            }
-
             // Set the node label
             rule {
               source_labels = ["__meta_kubernetes_pod_node_name"]
               target_label  = "node"
             }
 
-            // Build the path to the container log file
-            // Kubernetes log path format: /var/log/pods/{namespace}_{pod}_{uid}/{container}/*.log
-            // Using [^/]* instead of .* to avoid greedy matching across slashes
+            // Set app label from common label patterns
             rule {
-              source_labels = ["__meta_kubernetes_namespace", "__meta_kubernetes_pod_name", "__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
-              separator     = "/"
-              regex         = "([^/]*)/([^/]*)/([^/]*)/([^/]*)"
-              target_label  = "__path__"
-              replacement   = "/var/log/pods/$1_$2_$3/$4/*.log"
+              source_labels = ["__meta_kubernetes_pod_label_app"]
+              target_label  = "app"
+            }
+            rule {
+              source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+              target_label  = "app"
             }
           }
 
-          // Collect logs from discovered pod log files
-          loki.source.file "pod_logs" {
-            targets    = discovery.relabel.pod_logs.output
-            forward_to = [loki.process.pod_logs.receiver]
+          // Collect logs via Kubernetes API
+          // This streams logs directly from the API server, no file access needed
+          loki.source.kubernetes "pods" {
+            targets    = discovery.relabel.pods.output
+            forward_to = [loki.process.pods.receiver]
           }
 
-          // Process logs - parse timestamps and add labels
-          loki.process "pod_logs" {
+          // Process logs before sending to Loki
+          loki.process "pods" {
             forward_to = [loki.write.default.receiver]
 
-            // Parse CRI log format (containerd)
-            // Format: <timestamp> <stream> <flags> <log>
-            stage.cri {}
-
-            // Add static label identifying this as k8s logs
+            // Add static job label
             stage.static_labels {
               values = {
                 job = "kubernetes-pods",
@@ -141,16 +122,21 @@ spec:
             }
           }
 
-      # Volume mounts - MUST be inside alloy: section!
+      # No volume mounts needed - we use the Kubernetes API!
       mounts:
-        varlog: true  # Mount /var/log from host
+        varlog: false
+
+      # Clustering ensures logs aren't duplicated across replicas
+      clustering:
+        enabled: true
 
     # ==================================================================
-    # DAEMONSET CONFIGURATION
-    # Run one Alloy pod per node
+    # DEPLOYMENT CONFIGURATION
+    # Using Deployment instead of DaemonSet since we're reading from API
     # ==================================================================
     controller:
-      type: daemonset
+      type: deployment
+      replicas: 2
 
     # ==================================================================
     # RESOURCE LIMITS
@@ -158,9 +144,8 @@ spec:
     # ==================================================================
     resources:
       limits:
-        cpu: 150m
+        cpu: 200m
         memory: 256Mi
       requests:
         cpu: 50m
         memory: 128Mi
-
