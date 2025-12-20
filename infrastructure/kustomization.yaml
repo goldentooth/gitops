@@ -16,4 +16,6 @@ resources:
   - seaweedfs
   - tekton
   - docker-registry
+  - loki
+  - alloy
 patches:

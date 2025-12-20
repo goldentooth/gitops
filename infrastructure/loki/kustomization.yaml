@@ -1,0 +1,11 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # Grafana HelmRepository (shared with alloy)
+  - repository.yaml
+  # Loki HelmRelease - log aggregation in monolithic mode
+  - release.yaml
+  # Grafana datasource - auto-discovered via label
+  - datasource.yaml

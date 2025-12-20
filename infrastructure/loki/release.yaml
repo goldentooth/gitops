@@ -1,0 +1,124 @@
+---
+# HelmRelease for Loki
+# Log aggregation system in monolithic (SingleBinary) mode
+# Receives logs from Alloy, stores on local filesystem
+# Query via Grafana using LogQL
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: loki
+  namespace: flux-system
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: loki
+      version: '>=6.0.0 <7.0.0'
+      sourceRef:
+        kind: HelmRepository
+        name: grafana
+        namespace: flux-system
+      interval: 1h
+
+  targetNamespace: monitoring
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+
+  values:
+    # ==================================================================
+    # DEPLOYMENT MODE
+    # SingleBinary = all components (distributor, ingester, querier, etc.)
+    # running in a single process. Simple, good for small clusters.
+    # ==================================================================
+    deploymentMode: SingleBinary
+
+    # ==================================================================
+    # LOKI CONFIGURATION
+    # Core settings for the Loki server itself
+    # ==================================================================
+    loki:
+      # Disable authentication - we're inside the cluster
+      auth_enabled: false
+
+      # Single tenant mode (no multi-tenancy needed)
+      commonConfig:
+        replication_factor: 1
+
+      # Schema config defines how logs are indexed over time
+      # v13 is the latest schema version
+      schemaConfig:
+        configs:
+          - from: "2024-01-01"
+            store: tsdb
+            object_store: filesystem
+            schema: v13
+            index:
+              prefix: index_
+              period: 24h
+
+      # Storage config - local filesystem
+      storage:
+        type: filesystem
+
+      # Limits - retention and ingestion
+      limits_config:
+        retention_period: 168h  # 7 days
+
+      # Compactor handles retention enforcement and chunk compaction
+      compactor:
+        retention_enabled: true
+        delete_request_store: filesystem
+
+    # ==================================================================
+    # SINGLE BINARY DEPLOYMENT
+    # Resource limits and persistence for the monolithic deployment
+    # ==================================================================
+    singleBinary:
+      replicas: 1
+
+      resources:
+        limits:
+          cpu: 250m
+          memory: 512Mi
+        requests:
+          cpu: 100m
+          memory: 256Mi
+
+      persistence:
+        enabled: true
+        storageClass: local-path
+        size: 16Gi
+
+    # ==================================================================
+    # DISABLE DISTRIBUTED COMPONENTS
+    # We're using SingleBinary mode, so disable the microservices
+    # ==================================================================
+    backend:
+      replicas: 0
+    read:
+      replicas: 0
+    write:
+      replicas: 0
+
+    # Gateway handles incoming requests - not needed in monolithic mode
+    # when accessing Loki directly within the cluster
+    gateway:
+      enabled: false
+
+    # Disable built-in monitoring for now (we can enable later)
+    monitoring:
+      selfMonitoring:
+        enabled: false
+        grafanaAgent:
+          installOperator: false
+      lokiCanary:
+        enabled: false
+
+    # Disable test pod
+    test:
+      enabled: false
