@@ -100,10 +100,11 @@ spec:
 
             // Build the path to the container log file
             // Kubernetes log path format: /var/log/pods/{namespace}_{pod}_{uid}/{container}/*.log
+            // Using [^/]* instead of .* to avoid greedy matching across slashes
             rule {
               source_labels = ["__meta_kubernetes_namespace", "__meta_kubernetes_pod_name", "__meta_kubernetes_pod_uid", "__meta_kubernetes_pod_container_name"]
               separator     = "/"
-              regex         = "(.*)/(.*)/(.*)/(.*)"
+              regex         = "([^/]*)/([^/]*)/([^/]*)/([^/]*)"
               target_label  = "__path__"
               replacement   = "/var/log/pods/$1_$2_$3/$4/*.log"
             }
