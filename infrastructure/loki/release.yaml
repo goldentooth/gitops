@@ -110,14 +110,23 @@ spec:
     gateway:
       enabled: false
 
-    # Disable built-in monitoring for now (we can enable later)
-    monitoring:
-      selfMonitoring:
-        enabled: false
-        grafanaAgent:
-          installOperator: false
-      lokiCanary:
-        enabled: false
+    # ==================================================================
+    # DISABLE OPTIONAL COMPONENTS
+    # These are enabled by default in 6.x but not needed for our setup
+    # ==================================================================
+
+    # Loki Canary - health check DaemonSet (moved to root level in 6.x)
+    lokiCanary:
+      enabled: false
+
+    # Memcached caches - enabled by default in 6.x
+    # Disabling these falls back to Loki's built-in in-memory caching
+    # which is fine for our resource-constrained Pi cluster
+    chunksCache:
+      enabled: false
+
+    resultsCache:
+      enabled: false
 
     # Disable test pod
     test:
