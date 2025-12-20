@@ -141,6 +141,10 @@ spec:
             }
           }
 
+      # Volume mounts - MUST be inside alloy: section!
+      mounts:
+        varlog: true  # Mount /var/log from host
+
     # ==================================================================
     # DAEMONSET CONFIGURATION
     # Run one Alloy pod per node
@@ -160,10 +164,3 @@ spec:
         cpu: 50m
         memory: 128Mi
 
-    # ==================================================================
-    # VOLUME MOUNTS
-    # Need access to node's log directories
-    # ==================================================================
-    mounts:
-      varlog: true     # Mount /var/log from host
-      dockercontainers: false  # Not using Docker
