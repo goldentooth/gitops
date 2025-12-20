@@ -25,6 +25,8 @@ spec:
     remediation:
       retries: 3
   upgrade:
+    # 16-node DaemonSet on Raspberry Pis needs more time to roll out
+    timeout: 10m
     remediation:
       retries: 3
 
