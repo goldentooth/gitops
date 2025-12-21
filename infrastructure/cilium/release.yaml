@@ -19,9 +19,11 @@ spec:
     createNamespace: false
     remediation:
       retries: 3
+    timeout: 30m
   upgrade:
     remediation:
       retries: 3
+    timeout: 30m
   values:
     # Talos-specific requirements
     securityContext:
