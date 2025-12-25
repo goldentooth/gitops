@@ -210,6 +210,19 @@ spec:
       clustering:
         enabled: true
 
+      # Expose OTLP ports for trace ingestion from applications
+      extraPorts:
+        # OTLP gRPC receiver - standard OpenTelemetry port
+        - name: otlp-grpc
+          port: 4317
+          targetPort: 4317
+          protocol: TCP
+        # OTLP HTTP receiver - easier to debug, works with curl
+        - name: otlp-http
+          port: 4318
+          targetPort: 4318
+          protocol: TCP
+
     # ==================================================================
     # DEPLOYMENT CONFIGURATION
     # Using Deployment instead of DaemonSet since we're reading from API
@@ -230,19 +243,3 @@ spec:
         cpu: 100m
         memory: 192Mi
 
-    # ==================================================================
-    # SERVICE CONFIGURATION
-    # Expose OTLP ports for trace ingestion from applications
-    # ==================================================================
-    alloy:
-      extraPorts:
-        # OTLP gRPC receiver - standard OpenTelemetry port
-        - name: otlp-grpc
-          port: 4317
-          targetPort: 4317
-          protocol: TCP
-        # OTLP HTTP receiver - easier to debug, works with curl
-        - name: otlp-http
-          port: 4318
-          targetPort: 4318
-          protocol: TCP
