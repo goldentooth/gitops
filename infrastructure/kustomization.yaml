@@ -18,5 +18,6 @@ resources:
   - tekton
   - docker-registry
   - loki
+  - tempo
   - alloy
 patches:

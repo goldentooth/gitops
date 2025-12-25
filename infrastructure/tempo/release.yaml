@@ -1,0 +1,122 @@
+---
+# HelmRelease for Grafana Tempo
+# Distributed tracing backend - receives traces via OTLP from Alloy
+# Stores traces on local filesystem, queryable via Grafana with TraceQL
+#
+# Architecture:
+#   App --OTLP--> Alloy --OTLP--> Tempo --storage--> filesystem
+#                                   ^
+#                                   |
+#                              Grafana (TraceQL queries)
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: tempo
+  namespace: flux-system
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: tempo
+      # Using the simpler single-binary tempo chart, not tempo-distributed
+      # Good for learning and small clusters
+      version: '>=1.10.0 <2.0.0'
+      sourceRef:
+        kind: HelmRepository
+        name: grafana
+        namespace: flux-system
+      interval: 1h
+
+  targetNamespace: monitoring
+  install:
+    createNamespace: true
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+
+  values:
+    # ==================================================================
+    # TEMPO CONFIGURATION
+    # Core settings for trace ingestion and storage
+    # ==================================================================
+    tempo:
+      # Storage backend - local filesystem
+      # For production, you'd use S3/GCS/Azure, but filesystem is perfect
+      # for learning and keeps things simple on the Pi cluster
+      storage:
+        trace:
+          backend: local
+          local:
+            path: /var/tempo/traces
+          # Write-Ahead Log (WAL) for durability
+          # Traces are written to WAL first, then flushed to storage
+          wal:
+            path: /var/tempo/wal
+
+      # Retention - how long to keep traces
+      # 72 hours is reasonable for debugging; traces are typically
+      # shorter-lived than logs or metrics
+      retention: 72h
+
+      # Receivers - what protocols Tempo accepts directly
+      # We're using Alloy as our collector, so Tempo receives OTLP from Alloy
+      # But we enable receivers here too for flexibility
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: "0.0.0.0:4317"
+            http:
+              endpoint: "0.0.0.0:4318"
+
+      # Enable metrics generation from traces
+      # This creates RED metrics (Rate, Errors, Duration) automatically
+      # from your trace data - very useful for service dashboards
+      metricsGenerator:
+        enabled: true
+        remoteWriteUrl: "http://prometheus-monitoring-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
+
+      # Overrides for global limits
+      # These are per-tenant limits (we're single-tenant)
+      overrides:
+        defaults:
+          metrics_generator:
+            processors:
+              - service-graphs
+              - span-metrics
+
+    # ==================================================================
+    # PERSISTENCE
+    # Store traces on a PVC so they survive pod restarts
+    # ==================================================================
+    persistence:
+      enabled: true
+      storageClassName: local-path
+      size: 10Gi
+
+    # ==================================================================
+    # RESOURCE LIMITS
+    # Keep it reasonable for Raspberry Pi
+    # ==================================================================
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 100m
+        memory: 256Mi
+
+    # ==================================================================
+    # SERVICE CONFIGURATION
+    # Expose OTLP ports for trace ingestion
+    # ==================================================================
+    service:
+      type: ClusterIP
+
+    # Tempo exposes multiple ports:
+    # - 3100: HTTP API (queries, health checks)
+    # - 4317: OTLP gRPC receiver
+    # - 4318: OTLP HTTP receiver
+    # - 9095: gRPC for internal communication

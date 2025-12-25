@@ -1,7 +1,13 @@
 ---
 # HelmRelease for Grafana Alloy
-# Log collection agent - collects container logs via Kubernetes API and ships to Loki
-# Uses K8s API instead of hostPath mounts (no privileged access needed)
+# OpenTelemetry collector and log aggregation agent
+#
+# Pipelines:
+#   1. Logs: Kubernetes API -> Loki
+#   2. Traces: OTLP (4317/4318) -> Tempo
+#
+# Applications send traces to: monitoring-alloy.monitoring.svc.cluster.local:4318 (HTTP)
+#                          or: monitoring-alloy.monitoring.svc.cluster.local:4317 (gRPC)
 apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
 metadata:
@@ -40,7 +46,16 @@ spec:
       configMap:
         content: |
           // ============================================================
-          // KUBERNETES LOG COLLECTION PIPELINE
+          // ALLOY TELEMETRY PIPELINES
+          // This configuration defines multiple independent pipelines:
+          //   1. Kubernetes logs -> Loki
+          //   2. OTLP traces -> Tempo
+          //   3. OTLP metrics -> Prometheus (future)
+          // ============================================================
+
+
+          // ============================================================
+          // PIPELINE 1: KUBERNETES LOG COLLECTION
           // Uses Kubernetes API to stream pod logs (no hostPath mount needed)
           // This approach works with any PodSecurity policy
           // ============================================================
@@ -123,6 +138,70 @@ spec:
             }
           }
 
+
+          // ============================================================
+          // PIPELINE 2: OPENTELEMETRY TRACES
+          // Receives traces via OTLP HTTP/gRPC and forwards to Tempo
+          //
+          // Data flow:
+          //   App --OTLP--> otelcol.receiver.otlp
+          //                        |
+          //                        v
+          //                 otelcol.processor.batch (batches for efficiency)
+          //                        |
+          //                        v
+          //                 otelcol.exporter.otlp --> Tempo
+          // ============================================================
+
+          // OTLP Receiver - accepts traces from instrumented applications
+          // Listens on both gRPC (4317) and HTTP (4318) protocols
+          // Applications send traces here using the OTLP protocol
+          otelcol.receiver.otlp "default" {
+            // gRPC endpoint - more efficient, used by most SDKs by default
+            grpc {
+              endpoint = "0.0.0.0:4317"
+            }
+            // HTTP endpoint - easier to debug with curl, better proxy support
+            http {
+              endpoint = "0.0.0.0:4318"
+            }
+
+            // Forward received telemetry to the batch processor
+            output {
+              traces  = [otelcol.processor.batch.default.input]
+              // Future: metrics and logs can be added here
+              // metrics = [otelcol.processor.batch.default.input]
+              // logs    = [otelcol.processor.batch.default.input]
+            }
+          }
+
+          // Batch Processor - groups traces before sending to reduce overhead
+          // Instead of sending each span immediately, we batch them together
+          // This reduces network calls and improves throughput significantly
+          otelcol.processor.batch "default" {
+            // Send a batch when we hit 8KB of data
+            send_batch_size = 8192
+            // Or after 200ms, whichever comes first
+            timeout = "200ms"
+
+            output {
+              traces  = [otelcol.exporter.otlp.tempo.input]
+            }
+          }
+
+          // OTLP Exporter - sends traces to Tempo
+          // Tempo accepts OTLP natively, so we just forward the traces
+          otelcol.exporter.otlp "tempo" {
+            // Tempo's OTLP gRPC endpoint
+            client {
+              endpoint = "tempo.monitoring.svc.cluster.local:4317"
+              // TLS disabled for in-cluster communication
+              tls {
+                insecure = true
+              }
+            }
+          }
+
       # No volume mounts needed - we use the Kubernetes API!
       mounts:
         varlog: false
@@ -141,12 +220,29 @@ spec:
 
     # ==================================================================
     # RESOURCE LIMITS
-    # Keep it light for Raspberry Pi
+    # Keep it light for Raspberry Pi (bumped slightly for OTel processing)
     # ==================================================================
     resources:
       limits:
-        cpu: 200m
-        memory: 256Mi
+        cpu: 300m
+        memory: 384Mi
       requests:
-        cpu: 50m
-        memory: 128Mi
+        cpu: 100m
+        memory: 192Mi
+
+    # ==================================================================
+    # SERVICE CONFIGURATION
+    # Expose OTLP ports for trace ingestion from applications
+    # ==================================================================
+    alloy:
+      extraPorts:
+        # OTLP gRPC receiver - standard OpenTelemetry port
+        - name: otlp-grpc
+          port: 4317
+          targetPort: 4317
+          protocol: TCP
+        # OTLP HTTP receiver - easier to debug, works with curl
+        - name: otlp-http
+          port: 4318
+          targetPort: 4318
+          protocol: TCP

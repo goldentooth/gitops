@@ -1,0 +1,69 @@
+---
+# Grafana Datasource ConfigMap for Tempo
+# Grafana auto-discovers this via the grafana_datasource label
+# and adds Tempo as a queryable datasource for traces
+#
+# Once configured, you can:
+# - Query traces with TraceQL in Grafana Explore
+# - Click trace IDs in logs to jump to the trace (if correlationc configured)
+# - View service graphs generated from trace data
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tempo-datasource
+  namespace: monitoring
+  labels:
+    # This label tells Grafana's sidecar to pick up this ConfigMap
+    # and automatically configure the datasource
+    grafana_datasource: "1"
+data:
+  tempo-datasource.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Tempo
+        type: tempo
+        uid: tempo
+        url: http://tempo.monitoring.svc.cluster.local:3100
+        access: proxy
+        isDefault: false
+        jsonData:
+          # Link to Loki for trace-to-logs correlation
+          # When viewing a trace, you can jump to related logs
+          tracesToLogsV2:
+            datasourceUid: loki
+            spanStartTimeShift: "-1m"
+            spanEndTimeShift: "1m"
+            filterByTraceID: false
+            filterBySpanID: false
+            tags:
+              - key: "namespace"
+                value: "namespace"
+              - key: "pod"
+                value: "pod"
+          # Link to Prometheus for trace-to-metrics correlation
+          # Jump from a trace span to relevant service metrics
+          tracesToMetrics:
+            datasourceUid: prometheus
+            spanStartTimeShift: "-1m"
+            spanEndTimeShift: "1m"
+            tags:
+              - key: "service.name"
+                value: "service"
+          # Service graph visualization
+          # Shows dependencies between services based on trace data
+          serviceMap:
+            datasourceUid: prometheus
+          # Enable node graph visualization in trace view
+          nodeGraph:
+            enabled: true
+          # TraceQL search configuration
+          search:
+            hide: false
+          # Span bar visualization in trace view
+          traceQuery:
+            timeShiftEnabled: true
+            spanStartTimeShift: "-1m"
+            spanEndTimeShift: "1m"
+          # Loki search for traces (alternative to Tempo search)
+          lokiSearch:
+            datasourceUid: loki
