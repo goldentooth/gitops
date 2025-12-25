@@ -194,7 +194,7 @@ spec:
           otelcol.exporter.otlp "tempo" {
             // Tempo's OTLP gRPC endpoint
             client {
-              endpoint = "tempo.monitoring.svc.cluster.local:4317"
+              endpoint = "monitoring-tempo.monitoring.svc.cluster.local:4317"
               // TLS disabled for in-cluster communication
               tls {
                 insecure = true

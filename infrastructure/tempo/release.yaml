@@ -76,7 +76,7 @@ spec:
       # from your trace data - very useful for service dashboards
       metricsGenerator:
         enabled: true
-        remoteWriteUrl: "http://prometheus-monitoring-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
+        remoteWriteUrl: "http://monitoring-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090/api/v1/write"
 
       # Overrides for global limits
       # These are per-tenant limits (we're single-tenant)
