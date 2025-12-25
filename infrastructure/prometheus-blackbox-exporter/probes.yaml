@@ -1,0 +1,32 @@
+---
+# Probe CRD tells Prometheus Operator to configure blackbox probing
+# Prometheus will scrape blackbox-exporter with target URLs as parameters,
+# triggering outbound probes and collecting the resulting metrics
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: external-websites
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  # How often to probe these targets
+  interval: 60s
+
+  # Which blackbox exporter module to use (defined in release.yaml config)
+  module: http_2xx
+
+  # Reference to the blackbox exporter service
+  prober:
+    url: prometheus-blackbox-exporter.monitoring.svc.cluster.local:9115
+
+  # Static list of targets to probe
+  targets:
+    staticConfig:
+      static:
+        - https://goldentooth.net/
+        - https://clog.goldentooth.net/
+      labels:
+        # Custom labels attached to all metrics from these probes
+        environment: external
+        probe_type: website

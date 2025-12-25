@@ -1,0 +1,62 @@
+---
+# Prometheus Blackbox Exporter
+# Performs synthetic monitoring by probing endpoints from outside
+# Unlike normal exporters, Prometheus passes target URLs as query parameters:
+#   GET /probe?target=https://example.com&module=http_2xx
+# Blackbox then probes the target and returns metrics about the probe result
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: prometheus-blackbox-exporter
+  namespace: flux-system
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: prometheus-blackbox-exporter
+      version: ">=9.0.0 <10.0.0"
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: flux-system
+      interval: 12h
+
+  targetNamespace: monitoring
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+
+  values:
+    # Resource limits appropriate for Pi cluster
+    resources:
+      limits:
+        cpu: 100m
+        memory: 64Mi
+      requests:
+        cpu: 50m
+        memory: 32Mi
+
+    # Default modules for probing (http_2xx is the most common)
+    # These define HOW to probe - the Probe CRD defines WHAT to probe
+    config:
+      modules:
+        http_2xx:
+          prober: http
+          timeout: 10s
+          http:
+            valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+            valid_status_codes: [200, 201, 202, 203, 204, 301, 302]
+            method: GET
+            follow_redirects: true
+            preferred_ip_protocol: ip4
+
+    # ServiceMonitor for Prometheus to scrape blackbox-exporter's own metrics
+    # (not the probe results - those come via the Probe CRD)
+    serviceMonitor:
+      enabled: true
+      defaults:
+        labels:
+          release: kube-prometheus-stack

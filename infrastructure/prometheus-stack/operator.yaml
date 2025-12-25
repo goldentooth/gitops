@@ -91,6 +91,14 @@ spec:
         scrapeInterval: 30s
         evaluationInterval: 30s
 
+      # Expose Prometheus UI via LoadBalancer
+      service:
+        type: LoadBalancer
+        annotations:
+          metallb.io/address-pool: default
+          external-dns.alpha.kubernetes.io/hostname: prometheus.goldentooth.net
+          external-dns.alpha.kubernetes.io/ttl: "60"
+
     # ==================================================================
     # ALERTMANAGER
     # Routes and manages alerts (emails, Slack, PagerDuty, etc.)

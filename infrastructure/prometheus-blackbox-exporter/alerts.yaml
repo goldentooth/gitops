@@ -1,0 +1,44 @@
+---
+# PrometheusRule for blackbox exporter alerts
+# These alerts fire when external websites have issues
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: blackbox-exporter-alerts
+  namespace: monitoring
+  labels:
+    # This label ensures Prometheus Operator picks up the rule
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: blackbox-exporter
+      rules:
+        # Site completely unreachable
+        - alert: WebsiteDown
+          expr: probe_success == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Website {{ $labels.instance }} is down"
+            description: "{{ $labels.instance }} has been unreachable for more than 5 minutes."
+
+        # Site responding but slowly (> 10 seconds)
+        - alert: WebsiteSlow
+          expr: probe_duration_seconds > 10
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Website {{ $labels.instance }} is slow"
+            description: "{{ $labels.instance }} is taking more than 10 seconds to respond."
+
+        # Probe itself is failing (blackbox exporter issue, not target issue)
+        - alert: BlackboxProbeFailed
+          expr: up{job="probe"} == 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Blackbox probe job is down"
+            description: "The blackbox exporter probe job has been down for more than 5 minutes. Check the blackbox-exporter pod."

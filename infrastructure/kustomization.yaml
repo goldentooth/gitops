@@ -12,6 +12,7 @@ resources:
   - kubevirt
   - prometheus-stack
   - prometheus-node-exporter
+  - prometheus-blackbox-exporter
   - litmus
   - seaweedfs
   - tekton
