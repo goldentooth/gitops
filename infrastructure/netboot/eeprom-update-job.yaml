@@ -12,7 +12,10 @@
 #   4. talosctl -n <node-ip> reboot
 #   5. After reboot, EEPROM has new BOOT_ORDER
 #
-# BOOT_ORDER=0xf21 means: network(2) -> SD(1) -> retry(f)
+# BOOT_ORDER is read LSB-first (rightmost nibble = first boot source).
+#   0xf21 = SD(1) -> net(2) -> retry(f)
+#   0xf12 = net(2) -> SD(1) -> retry(f)   <- what we want
+#   0xf41 = SD(1) -> USB(4) -> retry(f)    <- factory default
 # See https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#BOOT_ORDER
 apiVersion: batch/v1
 kind: Job
@@ -35,12 +38,12 @@ spec:
           securityContext:
             privileged: true
           env:
-            # BOOT_ORDER values:
-            #   0xf21 = net -> sd -> retry (what we want)
-            #   0xf12 = sd -> net -> retry (fallback-only netboot)
-            #   0xf41 = sd -> usb -> retry (factory default)
+            # BOOT_ORDER values (read LSB-first):
+            #   0xf12 = net(2) -> SD(1) -> retry(f)  <- network first
+            #   0xf21 = SD(1) -> net(2) -> retry(f)  <- SD first
+            #   0xf41 = SD(1) -> USB(4) -> retry(f)  <- factory default
             - name: BOOT_ORDER
-              value: "0xf21"
+              value: "0xf12"
             # TFTP server IP (Velaryon)
             - name: TFTP_IP
               value: "10.4.0.30"
