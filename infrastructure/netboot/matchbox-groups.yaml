@@ -1,0 +1,45 @@
+---
+# Matchbox group definitions. Each group matches a Pi by MAC address
+# and maps it to a node-specific profile. When mounted as a volume,
+# each key becomes a .json file in /var/lib/matchbox/groups/.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: matchbox-groups
+  namespace: netboot
+data:
+  # --- Control plane nodes ---
+  allyrion.json: |
+    {"id":"allyrion","name":"allyrion","profile":"talos-allyrion","selector":{"mac":"d8:3a:dd:8a:7d:aa"}}
+  bettley.json: |
+    {"id":"bettley","name":"bettley","profile":"talos-bettley","selector":{"mac":"d8:3a:dd:89:c1:0b"}}
+  cargyll.json: |
+    {"id":"cargyll","name":"cargyll","profile":"talos-cargyll","selector":{"mac":"d8:3a:dd:8a:7d:ef"}}
+  # --- Worker nodes (Pi 4B) ---
+  dalt.json: |
+    {"id":"dalt","name":"dalt","profile":"talos-dalt","selector":{"mac":"d8:3a:dd:8a:7e:9a"}}
+  erenford.json: |
+    {"id":"erenford","name":"erenford","profile":"talos-erenford","selector":{"mac":"d8:3a:dd:8a:80:3c"}}
+  fenn.json: |
+    {"id":"fenn","name":"fenn","profile":"talos-fenn","selector":{"mac":"d8:3a:dd:89:ef:61"}}
+  gardener.json: |
+    {"id":"gardener","name":"gardener","profile":"talos-gardener","selector":{"mac":"d8:3a:dd:89:aa:7d"}}
+  harlton.json: |
+    {"id":"harlton","name":"harlton","profile":"talos-harlton","selector":{"mac":"d8:3a:dd:89:f9:23"}}
+  inchfield.json: |
+    {"id":"inchfield","name":"inchfield","profile":"talos-inchfield","selector":{"mac":"d8:3a:dd:89:fa:fc"}}
+  jast.json: |
+    {"id":"jast","name":"jast","profile":"talos-jast","selector":{"mac":"d8:3a:dd:89:f0:4b"}}
+  karstark.json: |
+    {"id":"karstark","name":"karstark","profile":"talos-karstark","selector":{"mac":"dc:a6:32:8f:48:50"}}
+  lipps.json: |
+    {"id":"lipps","name":"lipps","profile":"talos-lipps","selector":{"mac":"dc:a6:32:8c:98:75"}}
+  # --- Worker nodes (Pi 5) ---
+  manderly.json: |
+    {"id":"manderly","name":"manderly","profile":"talos-manderly","selector":{"mac":"2c:cf:67:ed:02:1a"}}
+  norcross.json: |
+    {"id":"norcross","name":"norcross","profile":"talos-norcross","selector":{"mac":"88:a2:9e:1b:f0:26"}}
+  oakheart.json: |
+    {"id":"oakheart","name":"oakheart","profile":"talos-oakheart","selector":{"mac":"2c:cf:67:ec:ff:48"}}
+  payne.json: |
+    {"id":"payne","name":"payne","profile":"talos-payne","selector":{"mac":"2c:cf:67:ed:2f:d7"}}

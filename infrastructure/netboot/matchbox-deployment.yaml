@@ -1,0 +1,77 @@
+---
+# Matchbox serves Talos machine configs to booting Pis over HTTP.
+#
+# Phase 2 component: not strictly required for basic network booting
+# (nodes can boot into maintenance mode and receive config via talosctl).
+# But once enabled, nodes can auto-provision by fetching their config
+# from Matchbox using the talos.config= kernel cmdline parameter.
+#
+# Machine configs are stored in a Secret (talos-machine-configs) that
+# must be created manually:
+#
+#   kubectl -n netboot create secret generic talos-machine-configs \
+#     --from-file=allyrion.yaml=cluster/clusterconfig/goldentooth-allyrion.yaml \
+#     --from-file=bettley.yaml=cluster/clusterconfig/goldentooth-bettley.yaml \
+#     ... (one --from-file per node)
+#
+# Groups and profiles are served from ConfigMaps.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: matchbox
+  namespace: netboot
+  labels:
+    app: matchbox
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: matchbox
+  template:
+    metadata:
+      labels:
+        app: matchbox
+    spec:
+      containers:
+        - name: matchbox
+          image: quay.io/poseidon/matchbox:v0.11.0
+          args:
+            - -address=0.0.0.0:8080
+            - -log-level=debug
+          ports:
+            - containerPort: 8080
+              name: http
+          volumeMounts:
+            # Matchbox expects groups/*.json, profiles/*.json, generic/*
+            # all under -data-path (default /var/lib/matchbox)
+            - name: groups
+              mountPath: /var/lib/matchbox/groups
+            - name: profiles
+              mountPath: /var/lib/matchbox/profiles
+            - name: machine-configs
+              mountPath: /var/lib/matchbox/generic
+              readOnly: true
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+      volumes:
+        - name: groups
+          configMap:
+            name: matchbox-groups
+        - name: profiles
+          configMap:
+            name: matchbox-profiles
+        # Machine configs contain certs/keys, so they live in a Secret.
+        # Create this manually (see comment at top of file).
+        - name: machine-configs
+          secret:
+            secretName: talos-machine-configs
+            optional: true

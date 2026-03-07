@@ -1,0 +1,36 @@
+---
+# dnsmasq configuration for Raspberry Pi network boot.
+#
+# Runs in proxy DHCP mode: responds to PXE boot requests from Pis
+# with TFTP server info, without conflicting with the existing UniFi
+# DHCP server. The Pi EEPROM uses its serial number (last 8 hex chars)
+# as the TFTP subdirectory, so each Pi downloads its own boot files.
+#
+# If proxy DHCP doesn't work with Pi firmware (some EEPROM versions
+# are picky), set next-server=10.4.0.30 in UniFi DHCP options instead
+# and remove the dhcp-range/proxy lines below.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dnsmasq-config
+  namespace: netboot
+data:
+  dnsmasq.conf: |
+    # Don't run as DNS server, just DHCP/TFTP
+    port=0
+
+    # Proxy DHCP mode: add PXE options to DHCP responses from the
+    # main DHCP server without issuing leases ourselves.
+    # The 255.255.240.0 mask matches the 10.4.0.0/20 infra subnet.
+    dhcp-range=10.4.0.0,proxy,255.255.240.0
+
+    # Log DHCP transactions (useful for debugging boot issues)
+    log-dhcp
+
+    # Built-in TFTP server
+    enable-tftp
+    tftp-root=/var/lib/tftpboot
+
+    # Don't resolve anything, we're not a DNS server
+    no-resolv
+    no-hosts

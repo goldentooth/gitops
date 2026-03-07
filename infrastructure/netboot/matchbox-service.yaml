@@ -1,0 +1,26 @@
+---
+# Matchbox LoadBalancer service. Uses a fixed MetalLB IP so the
+# talos.config= URL in cmdline.txt can reference a stable address
+# reachable by Pis before they join the cluster.
+#
+# Phase 2: uncomment the talos.config line in cmdline.txt and point
+# it at this service's IP to enable auto-provisioning.
+apiVersion: v1
+kind: Service
+metadata:
+  name: matchbox
+  namespace: netboot
+  labels:
+    app: matchbox
+spec:
+  type: LoadBalancer
+  # Pick a free IP from the MetalLB pool (10.4.11.0-10.4.15.254).
+  # Change this if it conflicts with an existing allocation.
+  loadBalancerIP: 10.4.11.50
+  selector:
+    app: matchbox
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http

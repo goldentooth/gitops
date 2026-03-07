@@ -1,0 +1,35 @@
+---
+# Node inventory for network boot.
+# Maps Pi serial numbers (last 8 hex chars, used as TFTP prefix) to hostnames,
+# MAC addresses, and IP addresses. The boot-assets init container uses this to
+# create per-node TFTP directories with the right cmdline.txt.
+#
+# Pi 4B serials start with 10000000; the EEPROM uses the last 8 chars as TFTP prefix.
+# Pi 5 serials are random; same last-8-char convention for TFTP prefix.
+#
+# To add a new node: append a line in the format:
+#   <serial_last_8> <hostname> <mac_address> <ip_address> <model>
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: node-inventory
+  namespace: netboot
+data:
+  nodes.conf: |
+    # serial    hostname    mac                 ip          model
+    f2c62f60    allyrion    d8:3a:dd:8a:7d:aa   10.4.0.10   pi4b
+    4cd9693a    bettley     d8:3a:dd:89:c1:0b   10.4.0.11   pi4b
+    59639862    cargyll     d8:3a:dd:8a:7d:ef   10.4.0.12   pi4b
+    d32a9346    dalt        d8:3a:dd:8a:7e:9a   10.4.0.13   pi4b
+    d4d172f8    erenford    d8:3a:dd:8a:80:3c   10.4.0.14   pi4b
+    d2a7ebcf    fenn        d8:3a:dd:89:ef:61   10.4.0.15   pi4b
+    13e0244f    gardener    d8:3a:dd:89:aa:7d   10.4.0.16   pi4b
+    39c0dd15    harlton     d8:3a:dd:89:f9:23   10.4.0.17   pi4b
+    1c0e763f    inchfield   d8:3a:dd:89:fa:fc   10.4.0.18   pi4b
+    caee93f7    jast        d8:3a:dd:89:f0:4b   10.4.0.19   pi4b
+    501b5731    karstark    dc:a6:32:8f:48:50   10.4.0.20   pi4b
+    19bdcd18    lipps       dc:a6:32:8c:98:75   10.4.0.21   pi4b
+    4cc0bf43    manderly    2c:cf:67:ed:02:1a   10.4.0.22   pi5
+    ed827daa    norcross    88:a2:9e:1b:f0:26   10.4.0.23   pi5
+    589ab701    oakheart    2c:cf:67:ec:ff:48   10.4.0.24   pi5
+    36cbaab1    payne       2c:cf:67:ed:2f:d7   10.4.0.25   pi5

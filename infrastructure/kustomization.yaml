@@ -20,4 +20,5 @@ resources:
   - loki
   - tempo
   - alloy
+  - netboot
 patches:

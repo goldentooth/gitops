@@ -1,0 +1,49 @@
+---
+# Matchbox profile definitions. Each profile points to a node-specific
+# machine config file in /var/lib/matchbox/generic/ (served via the
+# /generic endpoint). When mounted as a volume, each key becomes a
+# .json file in /var/lib/matchbox/profiles/.
+#
+# The generic_config value must match a key in the talos-machine-configs
+# Secret (e.g. "allyrion.yaml" -> Secret key "allyrion.yaml").
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: matchbox-profiles
+  namespace: netboot
+data:
+  # --- Control plane nodes ---
+  talos-allyrion.json: |
+    {"id":"talos-allyrion","name":"Talos - allyrion (control plane)","generic_config":"allyrion.yaml"}
+  talos-bettley.json: |
+    {"id":"talos-bettley","name":"Talos - bettley (control plane)","generic_config":"bettley.yaml"}
+  talos-cargyll.json: |
+    {"id":"talos-cargyll","name":"Talos - cargyll (control plane)","generic_config":"cargyll.yaml"}
+  # --- Worker nodes (Pi 4B) ---
+  talos-dalt.json: |
+    {"id":"talos-dalt","name":"Talos - dalt","generic_config":"dalt.yaml"}
+  talos-erenford.json: |
+    {"id":"talos-erenford","name":"Talos - erenford","generic_config":"erenford.yaml"}
+  talos-fenn.json: |
+    {"id":"talos-fenn","name":"Talos - fenn","generic_config":"fenn.yaml"}
+  talos-gardener.json: |
+    {"id":"talos-gardener","name":"Talos - gardener","generic_config":"gardener.yaml"}
+  talos-harlton.json: |
+    {"id":"talos-harlton","name":"Talos - harlton","generic_config":"harlton.yaml"}
+  talos-inchfield.json: |
+    {"id":"talos-inchfield","name":"Talos - inchfield","generic_config":"inchfield.yaml"}
+  talos-jast.json: |
+    {"id":"talos-jast","name":"Talos - jast","generic_config":"jast.yaml"}
+  talos-karstark.json: |
+    {"id":"talos-karstark","name":"Talos - karstark","generic_config":"karstark.yaml"}
+  talos-lipps.json: |
+    {"id":"talos-lipps","name":"Talos - lipps","generic_config":"lipps.yaml"}
+  # --- Worker nodes (Pi 5) ---
+  talos-manderly.json: |
+    {"id":"talos-manderly","name":"Talos - manderly","generic_config":"manderly.yaml"}
+  talos-norcross.json: |
+    {"id":"talos-norcross","name":"Talos - norcross","generic_config":"norcross.yaml"}
+  talos-oakheart.json: |
+    {"id":"talos-oakheart","name":"Talos - oakheart","generic_config":"oakheart.yaml"}
+  talos-payne.json: |
+    {"id":"talos-payne","name":"Talos - payne","generic_config":"payne.yaml"}
