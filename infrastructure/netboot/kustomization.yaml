@@ -6,7 +6,6 @@ resources:
   - node-inventory.yaml
   - dnsmasq-configmap.yaml
   - setup-boot-assets-script.yaml
-  - boot-assets-pvc.yaml
   - dnsmasq-daemonset.yaml
   - matchbox-groups.yaml
   - matchbox-profiles.yaml

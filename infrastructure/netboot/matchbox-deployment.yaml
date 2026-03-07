@@ -37,6 +37,7 @@ spec:
           image: quay.io/poseidon/matchbox:v0.11.0
           args:
             - -address=0.0.0.0:8080
+            - -assets-path=
             - -log-level=debug
           ports:
             - containerPort: 8080

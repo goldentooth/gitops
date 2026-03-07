@@ -88,8 +88,13 @@ spec:
           configMap:
             name: dnsmasq-config
         - name: tftpboot
-          persistentVolumeClaim:
-            claimName: tftpboot
+          # hostPath instead of PVC: the DaemonSet is pinned to Velaryon
+          # via nodeSelector, so there's no ambiguity about which node
+          # owns this data. Avoids local-path-provisioner helper-pod
+          # PodSecurity issues.
+          hostPath:
+            path: /var/lib/tftpboot
+            type: DirectoryOrCreate
         - name: setup-script
           configMap:
             name: setup-boot-assets-script

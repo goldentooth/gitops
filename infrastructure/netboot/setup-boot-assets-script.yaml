@@ -68,9 +68,6 @@ data:
         wget -q -O "${SHARED}/${f}" "${FW_BASE}/${f}"
       done
 
-      # armstub8-gic.dtb is needed for Pi 4B aarch64 GIC initialization
-      wget -q -O "${SHARED}/armstub8-gic.dtb" "${FW_BASE}/armstub8-gic.dtb" 2>/dev/null || true
-
       echo "Boot assets downloaded."
       ls -lh "${SHARED}/"
     fi
@@ -94,11 +91,6 @@ data:
         ln -sf "../_shared/${f}" "${DIR}/${f}"
       done
 
-      # armstub for Pi 4B
-      if [ -f "${SHARED}/armstub8-gic.dtb" ]; then
-        ln -sf "../_shared/armstub8-gic.dtb" "${DIR}/armstub8-gic.dtb"
-      fi
-
       # Device tree for the specific Pi model
       case "${model}" in
         pi4b)
@@ -121,7 +113,6 @@ data:
     disable_overscan=1
 
     [pi4]
-    armstub=armstub8-gic.dtb
     dtoverlay=disable-bt
     dtoverlay=disable-wifi
 
