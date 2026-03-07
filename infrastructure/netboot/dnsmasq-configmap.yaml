@@ -24,6 +24,14 @@ data:
     # The 255.255.240.0 mask matches the 10.4.0.0/20 infra subnet.
     dhcp-range=10.4.0.0,proxy,255.255.240.0
 
+    # Announce TFTP server to PXE clients. The Pi bootloader uses its
+    # serial number as TFTP subdirectory regardless of the boot filename,
+    # but the proxy DHCP won't respond without a dhcp-boot directive.
+    dhcp-boot=start4.elf,,10.4.0.30
+
+    # Also advertise via pxe-service for maximum compatibility.
+    pxe-service=0,"Raspberry Pi Boot"
+
     # Log DHCP transactions (useful for debugging boot issues)
     log-dhcp
 
