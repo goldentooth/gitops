@@ -22,54 +22,66 @@ data:
     # --- Configuration ---------------------------------------------------
     # Bump these when upgrading Talos or firmware.
     TALOS_VERSION="v1.11.1"
-    # RPi overlay schematic (includes rpi_generic SBC overlay)
+    # RPi overlay schematic (includes rpi_generic SBC overlay with U-Boot,
+    # firmware blobs, device trees, and overlays baked in).
     TALOS_SCHEMATIC="3be8dcdb5d390122648d2336fc1e7a2dd584c8fc391492fc9ae009639b864a06"
 
     TFTP_ROOT="/var/lib/tftpboot"
     SHARED="${TFTP_ROOT}/_shared"
     INVENTORY="/etc/netboot/nodes.conf"
 
-    # Talos factory URL for PXE artifacts. Falls back to GitHub releases
-    # if the factory doesn't serve separate kernel/initramfs files.
-    FACTORY="https://factory.talos.dev/image/${TALOS_SCHEMATIC}/${TALOS_VERSION}"
-    GITHUB="https://github.com/siderolabs/talos/releases/download/${TALOS_VERSION}"
+    # Talos factory metal image for RPi. We download the full disk image
+    # and extract the boot partition — this gives us the exact same files
+    # that Talos puts on the SD card: U-Boot, RPi firmware, DTBs, overlays.
+    FACTORY_IMAGE="https://factory.talos.dev/image/${TALOS_SCHEMATIC}/${TALOS_VERSION}/metal-arm64.raw.xz"
 
-    # RPi firmware from the upstream repository
-    FW_BASE="https://github.com/raspberrypi/firmware/raw/stable/boot"
+    apk add --no-cache wget xz mtools util-linux > /dev/null 2>&1
 
-    apk add --no-cache wget > /dev/null 2>&1
-
-    # --- Download shared boot assets ------------------------------------
-    if [ -f "${SHARED}/vmlinuz" ] && [ -f "${SHARED}/initramfs.xz" ]; then
+    # --- Download and extract boot partition from Talos image -----------
+    if [ -f "${SHARED}/u-boot.bin" ] && [ -f "${SHARED}/start4.elf" ]; then
       echo "Boot assets already present in ${SHARED}, skipping download."
     else
       mkdir -p "${SHARED}"
 
-      echo "Downloading Talos arm64 kernel..."
-      # Try factory first (schematic-specific), fall back to GitHub releases
-      if ! wget -q -O "${SHARED}/vmlinuz" "${FACTORY}/kernel-arm64" 2>/dev/null; then
-        echo "  Factory unavailable, falling back to GitHub releases..."
-        wget -q -O "${SHARED}/vmlinuz" "${GITHUB}/vmlinuz-arm64"
+      echo "Downloading Talos arm64 SBC image (~140MB, this takes a while)..."
+      wget -q --show-progress -O /tmp/metal-arm64.raw.xz "${FACTORY_IMAGE}"
+      echo "Decompressing..."
+      xz -d /tmp/metal-arm64.raw.xz
+
+      # The image has a GPT partition table. Extract the EFI/boot partition
+      # (FAT32) which contains U-Boot, RPi firmware, DTBs, and overlays.
+      echo "Locating boot partition in disk image..."
+      PART_INFO=$(fdisk -l /tmp/metal-arm64.raw 2>/dev/null | grep "EFI System")
+      if [ -z "${PART_INFO}" ]; then
+        echo "ERROR: Could not find EFI partition"
+        fdisk -l /tmp/metal-arm64.raw
+        exit 1
       fi
+      PART_START=$(echo "${PART_INFO}" | awk '{print $2}')
+      PART_END=$(echo "${PART_INFO}" | awk '{print $3}')
+      echo "  EFI partition: sectors ${PART_START}-${PART_END}"
 
-      echo "Downloading Talos arm64 initramfs..."
-      if ! wget -q -O "${SHARED}/initramfs.xz" "${FACTORY}/initramfs-arm64.xz" 2>/dev/null; then
-        echo "  Factory unavailable, falling back to GitHub releases..."
-        wget -q -O "${SHARED}/initramfs.xz" "${GITHUB}/initramfs-arm64.xz"
-      fi
+      # Extract just the boot partition into a separate FAT image
+      dd if=/tmp/metal-arm64.raw of=/tmp/boot.img \
+         bs=512 skip="${PART_START}" count=$((PART_END - PART_START + 1)) \
+         status=none
+      rm -f /tmp/metal-arm64.raw
 
-      echo "Downloading RPi firmware (start4.elf, fixup4.dat)..."
-      for f in start4.elf fixup4.dat; do
-        wget -q -O "${SHARED}/${f}" "${FW_BASE}/${f}"
-      done
+      # Use mtools to copy files from the FAT image without mounting.
+      # MTOOLS_SKIP_CHECK suppresses geometry warnings on raw partition images.
+      export MTOOLS_SKIP_CHECK=1
 
-      echo "Downloading device tree blobs..."
-      for f in bcm2711-rpi-4-b.dtb bcm2712-rpi-5-b.dtb; do
-        wget -q -O "${SHARED}/${f}" "${FW_BASE}/${f}"
-      done
+      echo "Extracting boot partition contents..."
+      # Copy all top-level files
+      mcopy -i /tmp/boot.img -s ::/ "${SHARED}/"
 
-      echo "Boot assets downloaded."
+      rm -f /tmp/boot.img
+
+      echo "Boot assets extracted:"
       ls -lh "${SHARED}/"
+      echo ""
+      echo "Key files:"
+      ls -lh "${SHARED}/u-boot.bin" "${SHARED}/start4.elf" "${SHARED}/config.txt" 2>/dev/null || true
     fi
 
     # --- Create per-node TFTP directories --------------------------------
@@ -82,55 +94,20 @@ data:
       DIR="${TFTP_ROOT}/${serial}"
       mkdir -p "${DIR}"
 
-      # Symlink kernel and initramfs
-      ln -sf "../_shared/vmlinuz"      "${DIR}/vmlinuz"
-      ln -sf "../_shared/initramfs.xz" "${DIR}/initramfs.xz"
-
-      # Symlink Pi firmware
-      for f in start4.elf fixup4.dat; do
-        ln -sf "../_shared/${f}" "${DIR}/${f}"
+      # Symlink everything from _shared/ into the node directory.
+      # This gives each node the full SD card boot partition via TFTP:
+      # u-boot.bin, start4.elf, all DTBs, overlays, etc.
+      for f in "${SHARED}"/*; do
+        name=$(basename "${f}")
+        # Skip config.txt — we may need to customize per-node
+        [ "${name}" = "config.txt" ] && continue
+        # For directories (like overlays/), create a symlink to the dir
+        ln -sf "../_shared/${name}" "${DIR}/${name}"
       done
 
-      # Device tree for the specific Pi model
-      case "${model}" in
-        pi4b)
-          ln -sf "../_shared/bcm2711-rpi-4-b.dtb" "${DIR}/bcm2711-rpi-4-b.dtb"
-          ;;
-        pi5)
-          ln -sf "../_shared/bcm2712-rpi-5-b.dtb" "${DIR}/bcm2712-rpi-5-b.dtb"
-          ;;
-      esac
-
-      # config.txt - Raspberry Pi firmware configuration.
-      # Conditional [pi4]/[pi5] sections let us use one file for both models.
-      cat > "${DIR}/config.txt" <<'PICONF'
-    [all]
-    arm_64bit=1
-    arm_boost=1
-    kernel=vmlinuz
-    initramfs initramfs.xz followkernel
-    enable_uart=1
-    disable_overscan=1
-
-    [pi4]
-    dtoverlay=disable-bt
-    dtoverlay=disable-wifi
-
-    [pi5]
-    dtoverlay=disable-bt
-    dtoverlay=disable-wifi
-    PICONF
-
-      # cmdline.txt - Talos kernel command line.
-      # If STATE partition exists on local storage, Talos uses the config
-      # stored there. The talos.config URL is only used on first boot or
-      # after a STATE wipe (enters maintenance mode if the URL is absent
-      # and no STATE partition is found).
-      #
-      # Phase 2: add "talos.config=http://<matchbox-ip>:8080/generic?mac=${mac}"
-      # to enable auto-provisioning. For now, new nodes boot into maintenance
-      # mode and get their config via talosctl apply-config.
-      echo "talos.platform=metal console=tty0 console=ttyAMA0,115200 sysctl.kernel.kexec_load_disabled=1 talos.dashboard.disabled=1 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on" > "${DIR}/cmdline.txt"
+      # config.txt - use the one from the Talos image as-is.
+      # It already sets kernel=u-boot.bin, arm_64bit=1, etc.
+      cp "${SHARED}/config.txt" "${DIR}/config.txt"
 
       echo "  ${serial} -> ${hostname} (${model})"
     done

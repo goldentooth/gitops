@@ -1,0 +1,165 @@
+---
+# Remote EEPROM update Job for Raspberry Pi 4B nodes.
+#
+# Places recovery.bin + modified pieeprom.upd on the boot partition.
+# On next reboot the VideoCore firmware flashes the EEPROM automatically
+# before Linux starts, then deletes the update files.
+#
+# Usage:
+#   1. Set TARGET_NODE below (or override via kustomize patch)
+#   2. kubectl apply -f eeprom-update-job.yaml
+#   3. Wait for Job to complete, check logs
+#   4. talosctl -n <node-ip> reboot
+#   5. After reboot, EEPROM has new BOOT_ORDER
+#
+# BOOT_ORDER=0xf21 means: network(2) -> SD(1) -> retry(f)
+# See https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#BOOT_ORDER
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: eeprom-update
+  namespace: netboot
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      # --- Change this to target a different node ---
+      nodeSelector:
+        kubernetes.io/hostname: dalt
+      restartPolicy: Never
+      hostPID: true
+      containers:
+        - name: eeprom-update
+          image: debian:bookworm-slim
+          securityContext:
+            privileged: true
+          env:
+            # BOOT_ORDER values:
+            #   0xf21 = net -> sd -> retry (what we want)
+            #   0xf12 = sd -> net -> retry (fallback-only netboot)
+            #   0xf41 = sd -> usb -> retry (factory default)
+            - name: BOOT_ORDER
+              value: "0xf21"
+            # TFTP server IP (Velaryon)
+            - name: TFTP_IP
+              value: "10.4.0.30"
+            # Boot partition device on Pi 4B
+            - name: BOOT_DEV
+              value: "/dev/mmcblk0p1"
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              echo "=== RPi 4B EEPROM Update ==="
+
+              apt-get update -qq && apt-get install -y -qq wget python3 > /dev/null 2>&1
+
+              MOUNT="/mnt/boot"
+              mkdir -p "${MOUNT}"
+              mount -t vfat "${BOOT_DEV}" "${MOUNT}"
+              echo "Boot partition mounted at ${MOUNT}"
+              ls -la "${MOUNT}/"
+
+              # Grab the rpi-eeprom tools from GitHub
+              EEPROM_REPO="https://github.com/raspberrypi/rpi-eeprom"
+              EEPROM_REF="master"
+              echo "Downloading rpi-eeprom tools..."
+              wget -q "${EEPROM_REPO}/archive/refs/heads/${EEPROM_REF}.tar.gz" -O /tmp/rpi-eeprom.tar.gz
+              tar xzf /tmp/rpi-eeprom.tar.gz -C /tmp/
+              EEPROM_DIR="/tmp/rpi-eeprom-${EEPROM_REF}"
+
+              # Find the latest stable EEPROM binary for Pi 4B
+              EEPROM_BIN=$(ls -t "${EEPROM_DIR}/firmware-2711/stable/"pieeprom-*.bin 2>/dev/null | head -1)
+              if [ -z "${EEPROM_BIN}" ]; then
+                # Try release directory naming
+                EEPROM_BIN=$(ls -t "${EEPROM_DIR}/firmware/stable/"pieeprom-*.bin 2>/dev/null | head -1)
+              fi
+              if [ -z "${EEPROM_BIN}" ]; then
+                echo "ERROR: Could not find EEPROM binary in rpi-eeprom repo"
+                ls -R "${EEPROM_DIR}/firmware"* 2>/dev/null | head -30
+                exit 1
+              fi
+              echo "Using EEPROM binary: ${EEPROM_BIN}"
+
+              # Find the rpi-eeprom-config tool
+              EEPROM_CONFIG="${EEPROM_DIR}/rpi-eeprom-config"
+              chmod +x "${EEPROM_CONFIG}"
+
+              # Extract current config from the EEPROM binary
+              echo ""
+              echo "=== Default EEPROM config ==="
+              python3 "${EEPROM_CONFIG}" "${EEPROM_BIN}" || true
+
+              # Create our desired config. Start from the default and override
+              # just the fields we care about.
+              python3 "${EEPROM_CONFIG}" "${EEPROM_BIN}" > /tmp/current.conf 2>/dev/null || true
+              cp /tmp/current.conf /tmp/new.conf
+
+              # Set BOOT_ORDER
+              if grep -q '^BOOT_ORDER=' /tmp/new.conf; then
+                sed -i "s/^BOOT_ORDER=.*/BOOT_ORDER=${BOOT_ORDER}/" /tmp/new.conf
+              else
+                echo "BOOT_ORDER=${BOOT_ORDER}" >> /tmp/new.conf
+              fi
+
+              # Set TFTP_IP so the Pi knows which server to contact
+              # (without this, it broadcasts DHCP to discover the TFTP server,
+              # which our proxy DHCP handles — but explicit is safer)
+              if grep -q '^TFTP_IP=' /tmp/new.conf; then
+                sed -i "s/^TFTP_IP=.*/TFTP_IP=${TFTP_IP}/" /tmp/new.conf
+              else
+                echo "TFTP_IP=${TFTP_IP}" >> /tmp/new.conf
+              fi
+
+              # Enable network boot (some EEPROMs have NET_BOOT disabled)
+              if grep -q '^NET_BOOT=' /tmp/new.conf; then
+                sed -i "s/^NET_BOOT=.*/NET_BOOT=1/" /tmp/new.conf
+              fi
+
+              echo ""
+              echo "=== New EEPROM config ==="
+              cat /tmp/new.conf
+
+              # Build modified EEPROM image
+              python3 "${EEPROM_CONFIG}" \
+                --config /tmp/new.conf \
+                --out /tmp/pieeprom.upd \
+                "${EEPROM_BIN}"
+              echo ""
+              echo "Modified EEPROM image: $(ls -lh /tmp/pieeprom.upd)"
+
+              # Find recovery.bin (the bootloader recovery stub)
+              RECOVERY="${EEPROM_DIR}/firmware-2711/stable/recovery.bin"
+              if [ ! -f "${RECOVERY}" ]; then
+                RECOVERY="${EEPROM_DIR}/firmware/stable/recovery.bin"
+              fi
+              if [ ! -f "${RECOVERY}" ]; then
+                # Try downloading from releases directly
+                echo "recovery.bin not in repo, downloading from GitHub releases..."
+                wget -q "https://github.com/raspberrypi/rpi-eeprom/raw/master/firmware-2711/stable/recovery.bin" -O /tmp/recovery.bin
+                RECOVERY="/tmp/recovery.bin"
+              fi
+              echo "Recovery stub: $(ls -lh "${RECOVERY}")"
+
+              # Write update files to boot partition
+              cp /tmp/pieeprom.upd "${MOUNT}/pieeprom.upd"
+              cp "${RECOVERY}" "${MOUNT}/recovery.bin"
+              sync
+
+              echo ""
+              echo "=== Files written to boot partition ==="
+              ls -la "${MOUNT}/pieeprom.upd" "${MOUNT}/recovery.bin"
+
+              umount "${MOUNT}"
+              echo ""
+              echo "Done. Reboot the node to apply the EEPROM update."
+              echo "After reboot, recovery.bin will flash the new EEPROM and"
+              echo "delete itself from the boot partition."
+          volumeMounts:
+            - name: dev
+              mountPath: /dev
+      volumes:
+        - name: dev
+          hostPath:
+            path: /dev
