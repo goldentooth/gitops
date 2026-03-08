@@ -34,6 +34,11 @@ data:
     # and extract the boot partition — this gives us the exact same files
     # that Talos puts on the SD card: U-Boot, RPi firmware, DTBs, overlays.
     FACTORY_IMAGE="https://factory.talos.dev/image/${TALOS_SCHEMATIC}/${TALOS_VERSION}/metal-arm64.raw.xz"
+    FACTORY_KERNEL="https://factory.talos.dev/image/${TALOS_SCHEMATIC}/${TALOS_VERSION}/kernel-arm64"
+    FACTORY_INITRD="https://factory.talos.dev/image/${TALOS_SCHEMATIC}/${TALOS_VERSION}/initramfs-arm64.xz"
+
+    # Matchbox URL for machine configs (served by the matchbox pod).
+    MATCHBOX_URL="http://10.4.11.50:8080"
 
     apk add --no-cache wget xz mtools util-linux > /dev/null 2>&1
 
@@ -83,6 +88,43 @@ data:
       echo "Key files:"
       ls -lh "${SHARED}/u-boot.bin" "${SHARED}/start4.elf" "${SHARED}/config.txt" 2>/dev/null || true
     fi
+
+    # --- Download Talos kernel and initramfs for PXE boot ----------------
+    # These go at the TFTP root level (U-Boot fetches from root, not
+    # from per-serial subdirectories like VideoCore does).
+    if [ -f "${TFTP_ROOT}/vmlinuz" ] && [ -f "${TFTP_ROOT}/initramfs-arm64.xz" ]; then
+      echo "Kernel and initramfs already present, skipping download."
+    else
+      echo "Downloading Talos kernel..."
+      wget -q --show-progress -O "${TFTP_ROOT}/vmlinuz" "${FACTORY_KERNEL}"
+      echo "Downloading Talos initramfs..."
+      wget -q --show-progress -O "${TFTP_ROOT}/initramfs-arm64.xz" "${FACTORY_INITRD}"
+      echo "Kernel/initramfs downloaded:"
+      ls -lh "${TFTP_ROOT}/vmlinuz" "${TFTP_ROOT}/initramfs-arm64.xz"
+    fi
+
+    # --- Create PXE boot config for U-Boot -------------------------------
+    # U-Boot looks for pxelinux.cfg/01-<mac> or pxelinux.cfg/default
+    # when doing PXE boot. We create per-MAC files so each node gets
+    # its own talos.config URL pointing to Matchbox.
+    mkdir -p "${TFTP_ROOT}/pxelinux.cfg"
+
+    grep -v '^[[:space:]]*#' "${INVENTORY}" | grep -v '^[[:space:]]*$' | while read -r serial hostname mac ip model; do
+      # U-Boot expects MAC in format 01-aa-bb-cc-dd-ee-ff (lowercase, dashes)
+      MAC_FILE=$(echo "${mac}" | tr ':' '-' | tr 'A-Z' 'a-z')
+      MAC_FILE="01-${MAC_FILE}"
+
+      PXE_CFG="${TFTP_ROOT}/pxelinux.cfg/${MAC_FILE}"
+      printf 'DEFAULT talos\nLABEL talos\n  KERNEL vmlinuz\n  INITRD initramfs-arm64.xz\n  APPEND talos.platform=metal console=tty0 console=ttyAMA0,115200 talos.config=%s/generic?mac=%s init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on\n' \
+        "${MATCHBOX_URL}" "${mac}" > "${PXE_CFG}"
+      echo "  pxelinux.cfg/${MAC_FILE} -> ${hostname}"
+    done
+
+    # Also create a fallback default config (no talos.config, node will
+    # enter maintenance mode for manual config assignment).
+    printf 'DEFAULT talos\nLABEL talos\n  KERNEL vmlinuz\n  INITRD initramfs-arm64.xz\n  APPEND talos.platform=metal console=tty0 console=ttyAMA0,115200 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on\n' \
+      > "${TFTP_ROOT}/pxelinux.cfg/default"
+    echo "  pxelinux.cfg/default (maintenance mode fallback)"
 
     # --- Create per-node TFTP directories --------------------------------
     # Each Pi fetches from /<serial>/ on the TFTP server. We create a
