@@ -4,7 +4,7 @@
 # /generic endpoint). When mounted as a volume, each key becomes a
 # .json file in /var/lib/matchbox/profiles/.
 #
-# The generic_config value must match a key in the talos-machine-configs
+# The generic_id value must match a key in the talos-machine-configs
 # Secret (e.g. "allyrion.yaml" -> Secret key "allyrion.yaml").
 apiVersion: v1
 kind: ConfigMap
@@ -14,36 +14,36 @@ metadata:
 data:
   # --- Control plane nodes ---
   talos-allyrion.json: |
-    {"id":"talos-allyrion","name":"Talos - allyrion (control plane)","generic_config":"allyrion.yaml"}
+    {"id":"talos-allyrion","name":"Talos - allyrion (control plane)","generic_id":"allyrion.yaml"}
   talos-bettley.json: |
-    {"id":"talos-bettley","name":"Talos - bettley (control plane)","generic_config":"bettley.yaml"}
+    {"id":"talos-bettley","name":"Talos - bettley (control plane)","generic_id":"bettley.yaml"}
   talos-cargyll.json: |
-    {"id":"talos-cargyll","name":"Talos - cargyll (control plane)","generic_config":"cargyll.yaml"}
+    {"id":"talos-cargyll","name":"Talos - cargyll (control plane)","generic_id":"cargyll.yaml"}
   # --- Worker nodes (Pi 4B) ---
   talos-dalt.json: |
-    {"id":"talos-dalt","name":"Talos - dalt","generic_config":"dalt.yaml"}
+    {"id":"talos-dalt","name":"Talos - dalt","generic_id":"dalt.yaml"}
   talos-erenford.json: |
-    {"id":"talos-erenford","name":"Talos - erenford","generic_config":"erenford.yaml"}
+    {"id":"talos-erenford","name":"Talos - erenford","generic_id":"erenford.yaml"}
   talos-fenn.json: |
-    {"id":"talos-fenn","name":"Talos - fenn","generic_config":"fenn.yaml"}
+    {"id":"talos-fenn","name":"Talos - fenn","generic_id":"fenn.yaml"}
   talos-gardener.json: |
-    {"id":"talos-gardener","name":"Talos - gardener","generic_config":"gardener.yaml"}
+    {"id":"talos-gardener","name":"Talos - gardener","generic_id":"gardener.yaml"}
   talos-harlton.json: |
-    {"id":"talos-harlton","name":"Talos - harlton","generic_config":"harlton.yaml"}
+    {"id":"talos-harlton","name":"Talos - harlton","generic_id":"harlton.yaml"}
   talos-inchfield.json: |
-    {"id":"talos-inchfield","name":"Talos - inchfield","generic_config":"inchfield.yaml"}
+    {"id":"talos-inchfield","name":"Talos - inchfield","generic_id":"inchfield.yaml"}
   talos-jast.json: |
-    {"id":"talos-jast","name":"Talos - jast","generic_config":"jast.yaml"}
+    {"id":"talos-jast","name":"Talos - jast","generic_id":"jast.yaml"}
   talos-karstark.json: |
-    {"id":"talos-karstark","name":"Talos - karstark","generic_config":"karstark.yaml"}
+    {"id":"talos-karstark","name":"Talos - karstark","generic_id":"karstark.yaml"}
   talos-lipps.json: |
-    {"id":"talos-lipps","name":"Talos - lipps","generic_config":"lipps.yaml"}
+    {"id":"talos-lipps","name":"Talos - lipps","generic_id":"lipps.yaml"}
   # --- Worker nodes (Pi 5) ---
   talos-manderly.json: |
-    {"id":"talos-manderly","name":"Talos - manderly","generic_config":"manderly.yaml"}
+    {"id":"talos-manderly","name":"Talos - manderly","generic_id":"manderly.yaml"}
   talos-norcross.json: |
-    {"id":"talos-norcross","name":"Talos - norcross","generic_config":"norcross.yaml"}
+    {"id":"talos-norcross","name":"Talos - norcross","generic_id":"norcross.yaml"}
   talos-oakheart.json: |
-    {"id":"talos-oakheart","name":"Talos - oakheart","generic_config":"oakheart.yaml"}
+    {"id":"talos-oakheart","name":"Talos - oakheart","generic_id":"oakheart.yaml"}
   talos-payne.json: |
-    {"id":"talos-payne","name":"Talos - payne","generic_config":"payne.yaml"}
+    {"id":"talos-payne","name":"Talos - payne","generic_id":"payne.yaml"}
