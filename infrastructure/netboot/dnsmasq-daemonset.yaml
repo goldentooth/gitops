@@ -41,8 +41,10 @@ spec:
 
       initContainers:
         # Downloads Talos boot assets and RPi firmware, then creates
-        # per-node TFTP directories with the appropriate config.txt
-        # and cmdline.txt for each Pi model (4B / 5).
+        # per-node TFTP directories with the appropriate config files
+        # for each Pi model:
+        #   Pi 4B: EDK2 UEFI + GRUB PXE chain (config.txt + armstub)
+        #   Pi 5:  Direct kernel boot from EEPROM (config.txt + cmdline.txt)
         - name: setup-boot-assets
           image: alpine:3.21
           command: ["/bin/sh", "/scripts/setup-boot-assets.sh"]

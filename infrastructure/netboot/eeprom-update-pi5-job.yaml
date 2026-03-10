@@ -1,0 +1,175 @@
+---
+# Remote EEPROM update Job for Raspberry Pi 5 nodes.
+#
+# Same approach as the Pi 4B variant (eeprom-update-job.yaml) but uses
+# BCM2712 firmware (firmware-2712/) instead of BCM2711. Places
+# recovery.bin + modified pieeprom.upd on the SD card boot partition.
+# On next reboot the BCM2712 ROM flashes the EEPROM automatically.
+#
+# Usage:
+#   1. Set TARGET_NODE below (or override at apply time)
+#   2. kubectl apply -f eeprom-update-pi5-job.yaml
+#   3. Wait for Job to complete, check logs
+#   4. talosctl -n <node-ip> reboot
+#   5. After reboot, EEPROM has new BOOT_ORDER and TFTP_IP
+#
+# BOOT_ORDER is read LSB-first (rightmost nibble = first boot source).
+#   0xf21 = SD(1) -> net(2) -> retry(f)   <- what we want
+#   0xf12 = net(2) -> SD(1) -> retry(f)
+#   0xf41 = SD(1) -> USB(4) -> retry(f)    <- factory default
+# See https://www.raspberrypi.com/documentation/computers/raspberry-pi.html#BOOT_ORDER
+#
+# For bricked Pi 5 nodes (no running OS):
+#   1. Format a small SD card as FAT32
+#   2. Copy recovery.bin + pieeprom.upd from a working node's output
+#   3. Insert into bricked Pi 5, power cycle
+#   4. ROM finds recovery.bin → flashes EEPROM → renames to RECOVERY.000
+#   5. On reboot: SD boot fails → network boot → TFTP → Talos install
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: eeprom-update-pi5
+  namespace: netboot
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      # --- Change this to target a specific Pi 5 node ---
+      nodeSelector:
+        kubernetes.io/hostname: oakheart
+      restartPolicy: Never
+      hostPID: true
+      containers:
+        - name: eeprom-update
+          image: debian:bookworm-slim
+          securityContext:
+            privileged: true
+          env:
+            # BOOT_ORDER: SD first, network fallback, retry
+            - name: BOOT_ORDER
+              value: "0xf21"
+            # TFTP server IP (Velaryon)
+            - name: TFTP_IP
+              value: "10.4.0.30"
+            # Boot partition device on Pi 5 (SD card)
+            - name: BOOT_DEV
+              value: "/dev/mmcblk0p1"
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              echo "=== RPi 5 (BCM2712) EEPROM Update ==="
+
+              apt-get update -qq && apt-get install -y -qq wget python3 > /dev/null 2>&1
+
+              MOUNT="/mnt/boot"
+              mkdir -p "${MOUNT}"
+              mount -t vfat "${BOOT_DEV}" "${MOUNT}"
+              echo "Boot partition mounted at ${MOUNT}"
+              ls -la "${MOUNT}/"
+
+              # Grab the rpi-eeprom tools from GitHub
+              EEPROM_REPO="https://github.com/raspberrypi/rpi-eeprom"
+              EEPROM_REF="master"
+              echo "Downloading rpi-eeprom tools..."
+              wget -q "${EEPROM_REPO}/archive/refs/heads/${EEPROM_REF}.tar.gz" -O /tmp/rpi-eeprom.tar.gz
+              tar xzf /tmp/rpi-eeprom.tar.gz -C /tmp/
+              EEPROM_DIR="/tmp/rpi-eeprom-${EEPROM_REF}"
+
+              # Find the latest stable EEPROM binary for BCM2712 (Pi 5)
+              EEPROM_BIN=$(ls -t "${EEPROM_DIR}/firmware-2712/stable/"pieeprom-*.bin 2>/dev/null | head -1)
+              if [ -z "${EEPROM_BIN}" ]; then
+                echo "ERROR: Could not find BCM2712 EEPROM binary in rpi-eeprom repo"
+                ls -R "${EEPROM_DIR}/firmware-2712/" 2>/dev/null | head -30
+                exit 1
+              fi
+              echo "Using EEPROM binary: ${EEPROM_BIN}"
+
+              # Find the rpi-eeprom-config tool
+              EEPROM_CONFIG="${EEPROM_DIR}/rpi-eeprom-config"
+              chmod +x "${EEPROM_CONFIG}"
+
+              # Extract current config from the EEPROM binary
+              echo ""
+              echo "=== Default EEPROM config ==="
+              python3 "${EEPROM_CONFIG}" "${EEPROM_BIN}" || true
+
+              # Create our desired config
+              python3 "${EEPROM_CONFIG}" "${EEPROM_BIN}" > /tmp/current.conf 2>/dev/null || true
+              cp /tmp/current.conf /tmp/new.conf
+
+              # Set BOOT_ORDER
+              if grep -q '^BOOT_ORDER=' /tmp/new.conf; then
+                sed -i "s/^BOOT_ORDER=.*/BOOT_ORDER=${BOOT_ORDER}/" /tmp/new.conf
+              else
+                echo "BOOT_ORDER=${BOOT_ORDER}" >> /tmp/new.conf
+              fi
+
+              # Set TFTP_IP so the Pi knows which server to contact
+              if grep -q '^TFTP_IP=' /tmp/new.conf; then
+                sed -i "s/^TFTP_IP=.*/TFTP_IP=${TFTP_IP}/" /tmp/new.conf
+              else
+                echo "TFTP_IP=${TFTP_IP}" >> /tmp/new.conf
+              fi
+
+              # Disable network install UI (we don't want it popping up)
+              if grep -q '^NET_INSTALL_ENABLED=' /tmp/new.conf; then
+                sed -i "s/^NET_INSTALL_ENABLED=.*/NET_INSTALL_ENABLED=0/" /tmp/new.conf
+              else
+                echo "NET_INSTALL_ENABLED=0" >> /tmp/new.conf
+              fi
+
+              echo ""
+              echo "=== New EEPROM config ==="
+              cat /tmp/new.conf
+
+              # Build modified EEPROM image
+              python3 "${EEPROM_CONFIG}" \
+                --config /tmp/new.conf \
+                --out /tmp/pieeprom.upd \
+                "${EEPROM_BIN}"
+              echo ""
+              echo "Modified EEPROM image: $(ls -lh /tmp/pieeprom.upd)"
+
+              # Find recovery.bin for BCM2712
+              RECOVERY="${EEPROM_DIR}/firmware-2712/stable/recovery.bin"
+              if [ ! -f "${RECOVERY}" ]; then
+                echo "recovery.bin not in repo, trying default location..."
+                RECOVERY=$(find "${EEPROM_DIR}" -name "recovery.bin" -path "*/2712*" | head -1)
+              fi
+              if [ ! -f "${RECOVERY}" ]; then
+                echo "ERROR: Could not find BCM2712 recovery.bin"
+                exit 1
+              fi
+              echo "Recovery stub: $(ls -lh "${RECOVERY}")"
+
+              # Write update files to boot partition
+              cp /tmp/pieeprom.upd "${MOUNT}/pieeprom.upd"
+              cp "${RECOVERY}" "${MOUNT}/recovery.bin"
+              sync
+
+              echo ""
+              echo "=== Files written to boot partition ==="
+              ls -la "${MOUNT}/pieeprom.upd" "${MOUNT}/recovery.bin"
+
+              # Also save copies for manually flashing bricked nodes
+              cp /tmp/pieeprom.upd /tmp/pieeprom-pi5-netboot.upd
+              echo ""
+              echo "Saved /tmp/pieeprom-pi5-netboot.upd for manual flashing."
+              echo "To flash a bricked Pi 5:"
+              echo "  1. Format a small SD card as FAT32"
+              echo "  2. Copy recovery.bin + pieeprom.upd to it"
+              echo "  3. Insert into bricked Pi 5 and power cycle"
+
+              umount "${MOUNT}"
+              echo ""
+              echo "Done. Reboot the node to apply the EEPROM update:"
+              echo "  talosctl -n <node-ip> reboot"
+          volumeMounts:
+            - name: dev
+              mountPath: /dev
+      volumes:
+        - name: dev
+          hostPath:
+            path: /dev

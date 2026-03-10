@@ -3,12 +3,16 @@
 # kernel/initramfs and RPi firmware files, then creates per-node
 # TFTP directories using the node-inventory ConfigMap.
 #
+# Supports both Pi 4B (EDK2 UEFI + GRUB PXE chain) and Pi 5
+# (direct kernel boot from EEPROM bootloader via TFTP).
+#
 # On subsequent restarts, skips the download if files already exist
 # and only refreshes the per-node directory structure (so inventory
 # changes take effect without re-downloading ~100MB of firmware).
 #
 # To force a re-download (e.g. after a Talos version bump), delete
-# the _shared/ directory in the TFTP PVC and restart the DaemonSet.
+# the _shared/ and _shared_pi5/ directories in the TFTP PVC and
+# restart the DaemonSet.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -21,60 +25,70 @@ data:
 
     # --- Configuration ---------------------------------------------------
     # Bump these when upgrading Talos or firmware.
-    TALOS_VERSION="v1.11.1"
-    # RPi overlay schematic (includes rpi_generic SBC overlay with
-    # firmware blobs, device trees, and overlays baked in).
-    TALOS_SCHEMATIC="3be8dcdb5d390122648d2336fc1e7a2dd584c8fc391492fc9ae009639b864a06"
+    TALOS_VERSION="v1.12.5"
+
+    # Pi 4B schematic (rpi_generic overlay + iscsi-tools + util-linux-tools).
+    TALOS_SCHEMATIC_PI4="613e1592b2da41ae5e265e8789429f22e121aab91cb4deb6bc3c0b6262961245"
+    # Pi 5 schematic (rpi_5 overlay + iscsi-tools + util-linux-tools + gvisor).
+    TALOS_SCHEMATIC_PI5="83695c67f221d4965e845b27fc1393f84e33101a2d30706d28fd21a28805650a"
+
     # EDK2 UEFI firmware release for RPi 4 (pftf/RPi4 project).
     UEFI_VERSION="v1.50"
 
     TFTP_ROOT="/var/lib/tftpboot"
-    SHARED="${TFTP_ROOT}/_shared"
+    SHARED="${TFTP_ROOT}/_shared"           # Pi 4 boot assets
+    SHARED_PI5="${TFTP_ROOT}/_shared_pi5"   # Pi 5 boot assets
     INVENTORY="/etc/netboot/nodes.conf"
 
     # Talos factory artifacts.
-    FACTORY_IMAGE="https://factory.talos.dev/image/${TALOS_SCHEMATIC}/${TALOS_VERSION}/metal-arm64.raw.xz"
-    FACTORY_KERNEL="https://factory.talos.dev/image/${TALOS_SCHEMATIC}/${TALOS_VERSION}/kernel-arm64"
-    FACTORY_INITRD="https://factory.talos.dev/image/${TALOS_SCHEMATIC}/${TALOS_VERSION}/initramfs-arm64.xz"
+    FACTORY_IMAGE_PI4="https://factory.talos.dev/image/${TALOS_SCHEMATIC_PI4}/${TALOS_VERSION}/metal-arm64.raw.xz"
+    FACTORY_IMAGE_PI5="https://factory.talos.dev/image/${TALOS_SCHEMATIC_PI5}/${TALOS_VERSION}/metal-arm64.raw.xz"
+    FACTORY_KERNEL="https://factory.talos.dev/image/${TALOS_SCHEMATIC_PI4}/${TALOS_VERSION}/kernel-arm64"
+    FACTORY_INITRD="https://factory.talos.dev/image/${TALOS_SCHEMATIC_PI4}/${TALOS_VERSION}/initramfs-arm64.xz"
     # EDK2 UEFI firmware for Raspberry Pi 4.
     UEFI_URL="https://github.com/pftf/RPi4/releases/download/${UEFI_VERSION}/RPi4_UEFI_Firmware_${UEFI_VERSION}.zip"
 
     apk add --no-cache wget xz mtools util-linux unzip > /dev/null 2>&1
 
-    # --- Download RPi firmware from Talos image --------------------------
-    # We need the VideoCore firmware (start4.elf, fixup4.dat), DTBs, and
-    # overlays from the Talos factory image. We do NOT use U-Boot or
-    # kernel8.img from the image — EDK2 UEFI replaces U-Boot.
-    if [ -f "${SHARED}/start4.elf" ] && [ -f "${SHARED}/RPI_EFI.fd" ]; then
-      echo "Boot assets already present in ${SHARED}, skipping download."
-    else
-      mkdir -p "${SHARED}"
-
-      echo "Downloading Talos arm64 SBC image (~140MB, this takes a while)..."
-      wget -q --show-progress -O /tmp/metal-arm64.raw.xz "${FACTORY_IMAGE}"
-      echo "Decompressing..."
-      xz -d /tmp/metal-arm64.raw.xz
-
+    # --- Helper: extract boot partition from a Talos disk image ----------
+    extract_boot_partition() {
+      local IMAGE="$1"
+      local DEST="$2"
       echo "Locating boot partition in disk image..."
-      PART_INFO=$(fdisk -l /tmp/metal-arm64.raw 2>/dev/null | grep "EFI System")
+      PART_INFO=$(fdisk -l "${IMAGE}" 2>/dev/null | grep "EFI System")
       if [ -z "${PART_INFO}" ]; then
         echo "ERROR: Could not find EFI partition"
-        fdisk -l /tmp/metal-arm64.raw
-        exit 1
+        fdisk -l "${IMAGE}"
+        return 1
       fi
       PART_START=$(echo "${PART_INFO}" | awk '{print $2}')
       PART_END=$(echo "${PART_INFO}" | awk '{print $3}')
       echo "  EFI partition: sectors ${PART_START}-${PART_END}"
-
-      dd if=/tmp/metal-arm64.raw of=/tmp/boot.img \
+      dd if="${IMAGE}" of=/tmp/boot.img \
          bs=512 skip="${PART_START}" count=$((PART_END - PART_START + 1)) \
          status=none
-      rm -f /tmp/metal-arm64.raw
-
       export MTOOLS_SKIP_CHECK=1
       echo "Extracting boot partition contents..."
-      mcopy -i /tmp/boot.img -s ::/ "${SHARED}/"
+      mcopy -i /tmp/boot.img -s ::/ "${DEST}/"
       rm -f /tmp/boot.img
+    }
+
+    # --- Download Pi 4 boot assets (firmware + UEFI) ---------------------
+    # We need the VideoCore firmware (start4.elf, fixup4.dat), DTBs, and
+    # overlays from the Talos factory image. We do NOT use U-Boot or
+    # kernel8.img from the image — EDK2 UEFI replaces U-Boot.
+    if [ -f "${SHARED}/start4.elf" ] && [ -f "${SHARED}/RPI_EFI.fd" ]; then
+      echo "Pi 4 boot assets already present in ${SHARED}, skipping download."
+    else
+      mkdir -p "${SHARED}"
+
+      echo "Downloading Talos arm64 Pi 4 image (~140MB, this takes a while)..."
+      wget -q --show-progress -O /tmp/metal-arm64-pi4.raw.xz "${FACTORY_IMAGE_PI4}"
+      echo "Decompressing..."
+      xz -d /tmp/metal-arm64-pi4.raw.xz
+
+      extract_boot_partition /tmp/metal-arm64-pi4.raw "${SHARED}"
+      rm -f /tmp/metal-arm64-pi4.raw
 
       # --- Download and overlay EDK2 UEFI firmware -----------------------
       echo "Downloading EDK2 UEFI firmware ${UEFI_VERSION}..."
@@ -126,14 +140,36 @@ data:
       cp /grub/grub-arm64.efi "${SHARED}/grub-arm64.efi"
       echo "PXE GRUB binary installed (pre-built arm64-efi)."
 
-      echo "Boot assets ready:"
+      echo "Pi 4 boot assets ready:"
       ls -lh "${SHARED}/RPI_EFI.fd" "${SHARED}/start4.elf" "${SHARED}/grub-arm64.efi" 2>/dev/null || true
+    fi
+
+    # --- Download Pi 5 boot assets (DTBs + overlays) ---------------------
+    # Pi 5 boots differently: the SPI EEPROM bootloader loads config.txt,
+    # device tree, and kernel directly from TFTP. No UEFI or GRUB needed.
+    # We only need the BCM2712 DTBs and overlays from the factory image.
+    if [ -f "${SHARED_PI5}/bcm2712-rpi-5-b.dtb" ]; then
+      echo "Pi 5 boot assets already present in ${SHARED_PI5}, skipping download."
+    else
+      mkdir -p "${SHARED_PI5}"
+
+      echo "Downloading Talos arm64 Pi 5 image (~140MB)..."
+      wget -q --show-progress -O /tmp/metal-arm64-pi5.raw.xz "${FACTORY_IMAGE_PI5}"
+      echo "Decompressing..."
+      xz -d /tmp/metal-arm64-pi5.raw.xz
+
+      extract_boot_partition /tmp/metal-arm64-pi5.raw "${SHARED_PI5}"
+      rm -f /tmp/metal-arm64-pi5.raw
+
+      echo "Pi 5 boot assets ready:"
+      ls -lh "${SHARED_PI5}/bcm2712-rpi-5-b.dtb" 2>/dev/null || echo "  WARNING: bcm2712 DTB not found!"
+      ls "${SHARED_PI5}/" | head -20
     fi
 
     # --- Download Talos kernel and initramfs -----------------------------
     # The vmlinuz from Talos is a PE-COFF EFI stub that GRUB can boot
-    # directly via the linux command. No need to decompress — GRUB and
-    # the EFI stub handle decompression internally.
+    # directly via the linux command (Pi 4 path), and the Pi 5 EEPROM
+    # bootloader can also load it directly as a kernel image.
     if [ -f "${TFTP_ROOT}/vmlinuz" ] && [ -f "${TFTP_ROOT}/initramfs-arm64.xz" ]; then
       echo "Kernel and initramfs already present, skipping."
     else
@@ -146,21 +182,14 @@ data:
       ls -lh "${TFTP_ROOT}/vmlinuz" "${TFTP_ROOT}/initramfs-arm64.xz"
     fi
 
-    # --- Set up GRUB as the PXE network bootloader -----------------------
+    # --- Set up GRUB as the PXE network bootloader (Pi 4 only) -----------
     # EDK2 UEFI does standard PXE: DHCP option 67 points to pxelinux.0,
     # which is our GRUB EFI binary. GRUB loads grub.cfg from TFTP, which
     # tells it to boot vmlinuz with initramfs and the Talos cmdline.
+    # Pi 5 nodes don't use GRUB — their EEPROM bootloader loads the
+    # kernel directly.
     cp "${SHARED}/grub-arm64.efi" "${TFTP_ROOT}/pxelinux.0"
 
-    # No need to copy a DTB to TFTP root: UEFI firmware is patched to
-    # DeviceTree mode, so it passes the VideoCore-prepared DTB through
-    # to the kernel via the EFI system table.
-
-    # Write GRUB config. GRUB exposes $net_default_mac when booted via
-    # PXE, so we can pass it to Matchbox for per-node config. We use
-    # Velaryon's real IP + NodePort (30813) instead of the MetalLB VIP
-    # because bare-metal nodes in maintenance mode can't reach MetalLB
-    # IPs (BGP routes aren't available pre-Kubernetes).
     for dir in "" "grub" "boot/grub" "EFI/BOOT"; do
       mkdir -p "${TFTP_ROOT}/${dir}" 2>/dev/null || true
       GRUB_CFG="${TFTP_ROOT}/${dir:+${dir}/}grub.cfg"
@@ -177,9 +206,10 @@ data:
     done
 
     # --- Create per-node TFTP directories --------------------------------
-    # VideoCore fetches firmware from /<serial>/ on the TFTP server.
-    # Each node gets a directory with symlinks to shared firmware and
-    # a custom config.txt for EDK2 UEFI boot.
+    # The EEPROM bootloader fetches files from /<serial>/ on the TFTP
+    # server (both Pi 4 and Pi 5 use this prefix convention). Each node
+    # gets a directory with symlinks to shared firmware and model-
+    # specific config files.
     echo "Setting up per-node TFTP directories..."
 
     grep -v '^[[:space:]]*#' "${INVENTORY}" | grep -v '^[[:space:]]*$' | while read -r serial hostname mac ip model; do
@@ -193,34 +223,80 @@ data:
       find "${DIR}" -maxdepth 1 -type l -delete
       find "${DIR}" -maxdepth 1 -type f -delete
 
-      # Symlink shared files, but skip items we override or don't want.
-      for f in "${SHARED}"/*; do
-        name=$(basename "${f}")
-        # Skip: we write our own config.txt; kernel/u-boot not needed
-        # (UEFI firmware is loaded as armstub, not as kernel=).
-        case "${name}" in
-          config.txt|u-boot.bin|kernel*.img) continue ;;
-        esac
-        ln -sf "../_shared/${name}" "${DIR}/${name}"
-      done
+      case "${model}" in
+        pi4b)
+          # --- Pi 4B: EDK2 UEFI + GRUB PXE chain ---
+          # Symlink shared Pi 4 firmware (start4.elf, RPI_EFI.fd, DTBs, overlays).
+          for f in "${SHARED}"/*; do
+            name=$(basename "${f}")
+            case "${name}" in
+              config.txt|u-boot.bin|kernel*.img) continue ;;
+            esac
+            ln -sf "../_shared/${name}" "${DIR}/${name}"
+          done
 
-      # Write UEFI-compatible config.txt. The key difference from the
-      # Talos default: armstub=RPI_EFI.fd replaces kernel=u-boot.bin.
-      # EDK2 UEFI provides full EFI services including network protocols,
-      # which GRUB needs for PXE boot.
-      printf '%s\n' \
-        'arm_64bit=1' \
-        'arm_boost=1' \
-        'enable_uart=1' \
-        'uart_2ndstage=1' \
-        'enable_gic=1' \
-        'armstub=RPI_EFI.fd' \
-        'disable_commandline_tags=1' \
-        'disable_overscan=1' \
-        'device_tree_address=0x3e0000' \
-        'device_tree_end=0x400000' \
-        'dtoverlay=miniuart-bt' \
-        'dtoverlay=upstream-pi4' > "${DIR}/config.txt"
+          # Write UEFI-compatible config.txt. armstub=RPI_EFI.fd replaces
+          # kernel=u-boot.bin. EDK2 UEFI provides full EFI services
+          # including network protocols, which GRUB needs for PXE boot.
+          printf '%s\n' \
+            'arm_64bit=1' \
+            'arm_boost=1' \
+            'enable_uart=1' \
+            'uart_2ndstage=1' \
+            'enable_gic=1' \
+            'armstub=RPI_EFI.fd' \
+            'disable_commandline_tags=1' \
+            'disable_overscan=1' \
+            'device_tree_address=0x3e0000' \
+            'device_tree_end=0x400000' \
+            'dtoverlay=miniuart-bt' \
+            'dtoverlay=upstream-pi4' > "${DIR}/config.txt"
+          ;;
+
+        pi5)
+          # --- Pi 5: Direct kernel boot from EEPROM bootloader ---
+          # The Pi 5 SPI EEPROM bootloader reads config.txt from TFTP,
+          # loads the device tree (auto-detected: bcm2712-rpi-5-b.dtb),
+          # kernel, and initramfs directly. No UEFI or GRUB needed.
+
+          # Symlink shared Pi 5 assets (DTBs, overlays).
+          for f in "${SHARED_PI5}"/*; do
+            name=$(basename "${f}")
+            case "${name}" in
+              config.txt|cmdline.txt|u-boot.bin|kernel*.img) continue ;;
+            esac
+            ln -sf "../_shared_pi5/${name}" "${DIR}/${name}"
+          done
+
+          # Symlink kernel and initramfs into the per-node directory.
+          # The EEPROM bootloader fetches all files relative to /<serial>/.
+          ln -sf "../vmlinuz" "${DIR}/vmlinuz"
+          ln -sf "../initramfs-arm64.xz" "${DIR}/initramfs-arm64.xz"
+
+          # Pi 5 config.txt: EEPROM bootloader loads kernel directly.
+          printf '%s\n' \
+            'arm_64bit=1' \
+            'arm_boost=1' \
+            'enable_uart=1' \
+            'uart_2ndstage=1' \
+            'kernel=vmlinuz' \
+            'initramfs initramfs-arm64.xz followkernel' \
+            'disable_overscan=1' > "${DIR}/config.txt"
+
+          # cmdline.txt: Talos kernel parameters with node-specific MAC
+          # for Matchbox config lookup. The Pi 5 EEPROM bootloader reads
+          # this file for the kernel command line (unlike Pi 4 where GRUB
+          # provides it via its config).
+          printf '%s' \
+            "talos.platform=metal talos.halt_if_installed console=tty0 console=ttyAMA0,115200 talos.config=http://10.4.0.30:8080/generic?mac=${mac} init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_appraise=fix ima_hash=sha512 ima_template=ima-ng" \
+            > "${DIR}/cmdline.txt"
+          ;;
+
+        *)
+          echo "  WARNING: unknown model '${model}' for ${hostname}, skipping"
+          continue
+          ;;
+      esac
 
       echo "  ${serial} -> ${hostname} (${model})"
     done
