@@ -6,16 +6,6 @@ metadata:
   namespace: gateway
   annotations:
     metallb.io/address-pool: default
-    external-dns.alpha.kubernetes.io/hostname: >-
-      grafana.goldentooth.net,
-      prometheus.goldentooth.net,
-      ntfy.goldentooth.net,
-      hubble.goldentooth.net,
-      httpbin.goldentooth.net,
-      jupyterlab.goldentooth.net,
-      chaos-center.goldentooth.net,
-      tekton-dashboard.goldentooth.net
-    external-dns.alpha.kubernetes.io/ttl: "60"
 spec:
   gatewayClassName: cilium
   listeners:

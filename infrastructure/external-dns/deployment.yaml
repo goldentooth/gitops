@@ -23,6 +23,7 @@ spec:
           image: registry.k8s.io/external-dns/external-dns:v0.14.2
           args:
             - --source=service
+            - --source=gateway-httproute
             - --domain-filter=goldentooth.net
             - --provider=aws
             - --aws-zone-type=public
