@@ -92,11 +92,7 @@ spec:
         enabled: true
         rollOutPods: true
         service:
-          type: LoadBalancer
-          annotations:
-            external-dns.alpha.kubernetes.io/hostname: hubble.goldentooth.net
-        ingress:
-          enabled: false  # Using LoadBalancer instead of Ingress
+          type: ClusterIP
 
     # Enable the Cilium Operator
     operator:
@@ -118,6 +114,10 @@ spec:
     # Routing mode
     routingMode: tunnel
     tunnelProtocol: vxlan  # or geneve, can experiment!
+
+    # Gateway API — TLS termination and HTTP routing for all services
+    gatewayAPI:
+      enabled: true
 
     # Enable auto-direct node routes for better performance
     autoDirectNodeRoutes: false  # Set to true if all nodes are in same L2 network

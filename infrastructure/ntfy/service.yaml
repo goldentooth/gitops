@@ -4,12 +4,8 @@ kind: Service
 metadata:
   name: ntfy
   namespace: ntfy
-  annotations:
-    metallb.io/address-pool: default
-    external-dns.alpha.kubernetes.io/hostname: ntfy.goldentooth.net
-    external-dns.alpha.kubernetes.io/ttl: "60"
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector:
     app: ntfy
   ports:

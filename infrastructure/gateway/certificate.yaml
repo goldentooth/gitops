@@ -1,0 +1,28 @@
+---
+# TLS certificate for all gateway hostnames, issued by Step-CA.
+# cert-manager will auto-renew before expiry.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: gateway-tls
+  namespace: gateway
+spec:
+  secretName: gateway-tls
+  duration: 24h
+  renewBefore: 8h
+  issuerRef:
+    name: step-ca
+    kind: StepClusterIssuer
+    group: certmanager.step.sm
+  subject:
+    organizations:
+      - Goldentooth
+  dnsNames:
+    - grafana.goldentooth.net
+    - prometheus.goldentooth.net
+    - ntfy.goldentooth.net
+    - hubble.goldentooth.net
+    - httpbin.goldentooth.net
+    - jupyterlab.goldentooth.net
+    - chaos-center.goldentooth.net
+    - tekton-dashboard.goldentooth.net

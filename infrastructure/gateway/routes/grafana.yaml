@@ -1,0 +1,17 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  parentRefs:
+    - name: goldentooth
+      namespace: gateway
+      sectionName: https
+  hostnames:
+    - grafana.goldentooth.net
+  rules:
+    - backendRefs:
+        - name: monitoring-kube-prometheus-stack-grafana
+          port: 80

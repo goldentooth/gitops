@@ -36,13 +36,8 @@ spec:
     portal:
       frontend:
         service:
-          type: LoadBalancer
+          type: ClusterIP
           port: 9091
-          annotations:
-            metallb.io/address-pool: default
-            external-dns.alpha.kubernetes.io/hostname: chaos-center.goldentooth.net
-            external-dns.alpha.kubernetes.io/ttl: "60"
-          externalTrafficPolicy: Local
         resources:
           requests:
             memory: "150Mi"

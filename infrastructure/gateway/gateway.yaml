@@ -1,0 +1,42 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: goldentooth
+  namespace: gateway
+  annotations:
+    metallb.io/address-pool: default
+    external-dns.alpha.kubernetes.io/hostname: >-
+      grafana.goldentooth.net,
+      prometheus.goldentooth.net,
+      ntfy.goldentooth.net,
+      hubble.goldentooth.net,
+      httpbin.goldentooth.net,
+      jupyterlab.goldentooth.net,
+      chaos-center.goldentooth.net,
+      tekton-dashboard.goldentooth.net
+    external-dns.alpha.kubernetes.io/ttl: "60"
+spec:
+  gatewayClassName: cilium
+  listeners:
+
+    # HTTP listener — redirects all traffic to HTTPS
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+
+    # HTTPS listener — terminates TLS with Step-CA cert
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: gateway-tls
+            namespace: gateway
+      allowedRoutes:
+        namespaces:
+          from: All

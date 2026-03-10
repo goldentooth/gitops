@@ -1,0 +1,17 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: prometheus
+  namespace: monitoring
+spec:
+  parentRefs:
+    - name: goldentooth
+      namespace: gateway
+      sectionName: https
+  hostnames:
+    - prometheus.goldentooth.net
+  rules:
+    - backendRefs:
+        - name: monitoring-kube-prometheus-prometheus
+          port: 9090

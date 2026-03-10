@@ -91,13 +91,8 @@ spec:
         scrapeInterval: 30s
         evaluationInterval: 30s
 
-      # Expose Prometheus UI via LoadBalancer
       service:
-        type: LoadBalancer
-        annotations:
-          metallb.io/address-pool: default
-          external-dns.alpha.kubernetes.io/hostname: prometheus.goldentooth.net
-          external-dns.alpha.kubernetes.io/ttl: "60"
+        type: ClusterIP
 
     # ==================================================================
     # ALERTMANAGER
@@ -166,11 +161,7 @@ spec:
           memory: 128Mi
 
       service:
-        type: LoadBalancer
-        annotations:
-          metallb.io/address-pool: default
-          external-dns.alpha.kubernetes.io/hostname: grafana.goldentooth.net
-          external-dns.alpha.kubernetes.io/ttl: "60"
+        type: ClusterIP
 
       # Datasource auto-configured to point to Prometheus in same namespace
       # This is done automatically by the chart

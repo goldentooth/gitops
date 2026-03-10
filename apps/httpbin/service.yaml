@@ -3,13 +3,8 @@ kind: Service
 metadata:
   name: httpbin
   namespace: httpbin
-  annotations:
-    metallb.io/address-pool: default
-    external-dns.alpha.kubernetes.io/hostname: httpbin.goldentooth.net
-    external-dns.alpha.kubernetes.io/ttl: "60"
 spec:
-  type: LoadBalancer
-  externalTrafficPolicy: Local
+  type: ClusterIP
   ports:
     - name: http
       port: 80
