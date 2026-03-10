@@ -1,0 +1,35 @@
+---
+# Allow HTTPRoutes in other namespaces to reference the Gateway in the
+# gateway namespace. Without this, cross-namespace route attachment is denied.
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-routes-to-gateway
+  namespace: gateway
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: ntfy
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: monitoring
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: kube-system
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: httpbin
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: jupyterlab
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: litmus
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: tekton-pipelines
+  to:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: goldentooth
