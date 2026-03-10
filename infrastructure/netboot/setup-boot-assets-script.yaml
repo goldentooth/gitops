@@ -287,8 +287,13 @@ data:
           # for Matchbox config lookup. The Pi 5 EEPROM bootloader reads
           # this file for the kernel command line (unlike Pi 4 where GRUB
           # provides it via its config).
+          #
+          # NOTE: no talos.halt_if_installed here — Pi 5 nodes netboot
+          # only when their SD card boot fails, so we always want a fresh
+          # install. (Pi 4 keeps it in the GRUB config because they PXE
+          # boot every time.)
           printf '%s' \
-            "talos.platform=metal talos.halt_if_installed console=tty0 console=ttyAMA0,115200 talos.config=http://10.4.0.30:8080/generic?mac=${mac} init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_appraise=fix ima_hash=sha512 ima_template=ima-ng" \
+            "talos.platform=metal console=tty0 console=ttyAMA0,115200 talos.config=http://10.4.0.30:8080/generic?mac=${mac} init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_appraise=fix ima_hash=sha512 ima_template=ima-ng" \
             > "${DIR}/cmdline.txt"
           ;;
 
