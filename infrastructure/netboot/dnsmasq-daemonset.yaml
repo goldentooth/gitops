@@ -53,6 +53,8 @@ spec:
               mountPath: /scripts
             - name: node-inventory
               mountPath: /etc/netboot
+            - name: grub-arm64-efi
+              mountPath: /grub
 
       containers:
         - name: dnsmasq
@@ -102,3 +104,11 @@ spec:
         - name: node-inventory
           configMap:
             name: node-inventory
+        # Pre-built PXE GRUB binary (arm64-efi). Built on an arm64
+        # node since grub-mkimage can't cross-compile to arm64-efi
+        # on x86. Modules: efinet net tftp linux normal configfile
+        # echo test search gzio part_gpt fat fdt. Embedded config:
+        # 'configfile (tftp)/grub.cfg'
+        - name: grub-arm64-efi
+          configMap:
+            name: grub-arm64-efi

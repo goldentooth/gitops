@@ -22,28 +22,30 @@ data:
     # --- Configuration ---------------------------------------------------
     # Bump these when upgrading Talos or firmware.
     TALOS_VERSION="v1.11.1"
-    # RPi overlay schematic (includes rpi_generic SBC overlay with U-Boot,
+    # RPi overlay schematic (includes rpi_generic SBC overlay with
     # firmware blobs, device trees, and overlays baked in).
     TALOS_SCHEMATIC="3be8dcdb5d390122648d2336fc1e7a2dd584c8fc391492fc9ae009639b864a06"
+    # EDK2 UEFI firmware release for RPi 4 (pftf/RPi4 project).
+    UEFI_VERSION="v1.50"
 
     TFTP_ROOT="/var/lib/tftpboot"
     SHARED="${TFTP_ROOT}/_shared"
     INVENTORY="/etc/netboot/nodes.conf"
 
-    # Talos factory metal image for RPi. We download the full disk image
-    # and extract the boot partition — this gives us the exact same files
-    # that Talos puts on the SD card: U-Boot, RPi firmware, DTBs, overlays.
+    # Talos factory artifacts.
     FACTORY_IMAGE="https://factory.talos.dev/image/${TALOS_SCHEMATIC}/${TALOS_VERSION}/metal-arm64.raw.xz"
     FACTORY_KERNEL="https://factory.talos.dev/image/${TALOS_SCHEMATIC}/${TALOS_VERSION}/kernel-arm64"
     FACTORY_INITRD="https://factory.talos.dev/image/${TALOS_SCHEMATIC}/${TALOS_VERSION}/initramfs-arm64.xz"
+    # EDK2 UEFI firmware for Raspberry Pi 4.
+    UEFI_URL="https://github.com/pftf/RPi4/releases/download/${UEFI_VERSION}/RPi4_UEFI_Firmware_${UEFI_VERSION}.zip"
 
-    # Matchbox URL for machine configs (served by the matchbox pod).
-    MATCHBOX_URL="http://10.4.11.50:8080"
+    apk add --no-cache wget xz mtools util-linux unzip > /dev/null 2>&1
 
-    apk add --no-cache wget xz mtools util-linux > /dev/null 2>&1
-
-    # --- Download and extract boot partition from Talos image -----------
-    if [ -f "${SHARED}/u-boot.bin" ] && [ -f "${SHARED}/start4.elf" ]; then
+    # --- Download RPi firmware from Talos image --------------------------
+    # We need the VideoCore firmware (start4.elf, fixup4.dat), DTBs, and
+    # overlays from the Talos factory image. We do NOT use U-Boot or
+    # kernel8.img from the image — EDK2 UEFI replaces U-Boot.
+    if [ -f "${SHARED}/start4.elf" ] && [ -f "${SHARED}/RPI_EFI.fd" ]; then
       echo "Boot assets already present in ${SHARED}, skipping download."
     else
       mkdir -p "${SHARED}"
@@ -53,8 +55,6 @@ data:
       echo "Decompressing..."
       xz -d /tmp/metal-arm64.raw.xz
 
-      # The image has a GPT partition table. Extract the EFI/boot partition
-      # (FAT32) which contains U-Boot, RPi firmware, DTBs, and overlays.
       echo "Locating boot partition in disk image..."
       PART_INFO=$(fdisk -l /tmp/metal-arm64.raw 2>/dev/null | grep "EFI System")
       if [ -z "${PART_INFO}" ]; then
@@ -66,90 +66,161 @@ data:
       PART_END=$(echo "${PART_INFO}" | awk '{print $3}')
       echo "  EFI partition: sectors ${PART_START}-${PART_END}"
 
-      # Extract just the boot partition into a separate FAT image
       dd if=/tmp/metal-arm64.raw of=/tmp/boot.img \
          bs=512 skip="${PART_START}" count=$((PART_END - PART_START + 1)) \
          status=none
       rm -f /tmp/metal-arm64.raw
 
-      # Use mtools to copy files from the FAT image without mounting.
-      # MTOOLS_SKIP_CHECK suppresses geometry warnings on raw partition images.
       export MTOOLS_SKIP_CHECK=1
-
       echo "Extracting boot partition contents..."
-      # Copy all top-level files
       mcopy -i /tmp/boot.img -s ::/ "${SHARED}/"
-
       rm -f /tmp/boot.img
 
-      echo "Boot assets extracted:"
-      ls -lh "${SHARED}/"
-      echo ""
-      echo "Key files:"
-      ls -lh "${SHARED}/u-boot.bin" "${SHARED}/start4.elf" "${SHARED}/config.txt" 2>/dev/null || true
+      # --- Download and overlay EDK2 UEFI firmware -----------------------
+      echo "Downloading EDK2 UEFI firmware ${UEFI_VERSION}..."
+      wget -q --show-progress -O /tmp/uefi.zip "${UEFI_URL}"
+      unzip -o /tmp/uefi.zip -d /tmp/uefi > /dev/null
+
+      # Overlay UEFI files into _shared/ (replaces start4.elf, fixup4.dat,
+      # bcm2711 DTB, and adds RPI_EFI.fd + UEFI-specific overlays).
+      cp /tmp/uefi/RPI_EFI.fd "${SHARED}/RPI_EFI.fd"
+      cp /tmp/uefi/start4.elf "${SHARED}/start4.elf"
+      cp /tmp/uefi/fixup4.dat "${SHARED}/fixup4.dat"
+      cp /tmp/uefi/bcm2711-rpi-4-b.dtb "${SHARED}/bcm2711-rpi-4-b.dtb"
+      cp /tmp/uefi/overlays/* "${SHARED}/overlays/" 2>/dev/null || true
+      rm -rf /tmp/uefi /tmp/uefi.zip
+
+      # Patch the UEFI NVRAM to set SystemTableMode=2 (DeviceTree).
+      # By default EDK2 uses ACPI mode which doesn't expose the BCM2711
+      # SD controller. DT mode passes the VideoCore-prepared device tree
+      # through to the OS, giving the kernel proper hardware descriptions.
+      # The NVRAM variable store starts at offset 0x3B0048 in the FD;
+      # variables begin at +28 (after the store header). The store uses
+      # authenticated variable format (gEfiAuthenticatedVariableGuid).
+      NVRAM_OFF=$((0x3B0064))
+      printf '\xaa\x55\x3f\x00' > /tmp/nvram_var.bin                       # StartId(2) + State(1) + Reserved(1)
+      printf '\x07\x00\x00\x00' >> /tmp/nvram_var.bin                      # Attributes: NV|BS|RT
+      printf '\x00\x00\x00\x00\x00\x00\x00\x00' >> /tmp/nvram_var.bin     # MonotonicCount (8 bytes, zero)
+      printf '\x00\x00\x00\x00\x00\x00\x00\x00' >> /tmp/nvram_var.bin     # TimeStamp part 1 (8 bytes, zero)
+      printf '\x00\x00\x00\x00\x00\x00\x00\x00' >> /tmp/nvram_var.bin     # TimeStamp part 2 (8 bytes, zero)
+      printf '\x00\x00\x00\x00' >> /tmp/nvram_var.bin                      # PubKeyIndex (4 bytes, zero)
+      printf '\x20\x00\x00\x00' >> /tmp/nvram_var.bin                      # NameSize (32 bytes)
+      printf '\x04\x00\x00\x00' >> /tmp/nvram_var.bin                      # DataSize (4 bytes)
+      printf '\x58\xc2\x7c\xcd\xdb\x31\xe6\x22' >> /tmp/nvram_var.bin     # GUID part 1
+      printf '\x9f\x22\x63\xb0\xb8\xee\xd6\xb5' >> /tmp/nvram_var.bin     # GUID part 2
+      printf 'S\x00y\x00s\x00t\x00e\x00m\x00T\x00a\x00' >> /tmp/nvram_var.bin  # Name UCS-2
+      printf 'b\x00l\x00e\x00M\x00o\x00d\x00e\x00\x00\x00' >> /tmp/nvram_var.bin
+      printf '\x02\x00\x00\x00' >> /tmp/nvram_var.bin                      # Value=2 (DeviceTree)
+      dd if=/tmp/nvram_var.bin of="${SHARED}/RPI_EFI.fd" \
+         bs=1 seek=${NVRAM_OFF} conv=notrunc status=none
+      rm -f /tmp/nvram_var.bin
+      echo "Patched UEFI NVRAM: SystemTableMode=2 (DeviceTree)"
+
+      # Copy the pre-built PXE GRUB EFI binary. It's mounted from a
+      # ConfigMap because grub-mkimage can't cross-compile arm64-efi
+      # modules on this x86 node. The binary was built on an arm64
+      # node with: grub-mkimage -O arm64-efi -p "(tftp)" \
+      #   --config=<(echo 'configfile (tftp)/grub.cfg') \
+      #   efinet net tftp linux normal configfile echo test search \
+      #   gzio part_gpt fat fdt
+      cp /grub/grub-arm64.efi "${SHARED}/grub-arm64.efi"
+      echo "PXE GRUB binary installed (pre-built arm64-efi)."
+
+      echo "Boot assets ready:"
+      ls -lh "${SHARED}/RPI_EFI.fd" "${SHARED}/start4.elf" "${SHARED}/grub-arm64.efi" 2>/dev/null || true
     fi
 
-    # --- Download Talos kernel and initramfs for PXE boot ----------------
-    # These go at the TFTP root level (U-Boot fetches from root, not
-    # from per-serial subdirectories like VideoCore does).
+    # --- Download Talos kernel and initramfs -----------------------------
+    # The vmlinuz from Talos is a PE-COFF EFI stub that GRUB can boot
+    # directly via the linux command. No need to decompress — GRUB and
+    # the EFI stub handle decompression internally.
     if [ -f "${TFTP_ROOT}/vmlinuz" ] && [ -f "${TFTP_ROOT}/initramfs-arm64.xz" ]; then
-      echo "Kernel and initramfs already present, skipping download."
+      echo "Kernel and initramfs already present, skipping."
     else
-      echo "Downloading Talos kernel..."
+      echo "Downloading Talos kernel (vmlinuz)..."
       wget -q --show-progress -O "${TFTP_ROOT}/vmlinuz" "${FACTORY_KERNEL}"
+
       echo "Downloading Talos initramfs..."
       wget -q --show-progress -O "${TFTP_ROOT}/initramfs-arm64.xz" "${FACTORY_INITRD}"
-      echo "Kernel/initramfs downloaded:"
+      echo "Kernel/initramfs ready:"
       ls -lh "${TFTP_ROOT}/vmlinuz" "${TFTP_ROOT}/initramfs-arm64.xz"
     fi
 
-    # --- Create PXE boot config for U-Boot -------------------------------
-    # U-Boot looks for pxelinux.cfg/01-<mac> or pxelinux.cfg/default
-    # when doing PXE boot. We create per-MAC files so each node gets
-    # its own talos.config URL pointing to Matchbox.
-    mkdir -p "${TFTP_ROOT}/pxelinux.cfg"
+    # --- Set up GRUB as the PXE network bootloader -----------------------
+    # EDK2 UEFI does standard PXE: DHCP option 67 points to pxelinux.0,
+    # which is our GRUB EFI binary. GRUB loads grub.cfg from TFTP, which
+    # tells it to boot vmlinuz with initramfs and the Talos cmdline.
+    cp "${SHARED}/grub-arm64.efi" "${TFTP_ROOT}/pxelinux.0"
 
-    grep -v '^[[:space:]]*#' "${INVENTORY}" | grep -v '^[[:space:]]*$' | while read -r serial hostname mac ip model; do
-      # U-Boot expects MAC in format 01-aa-bb-cc-dd-ee-ff (lowercase, dashes)
-      MAC_FILE=$(echo "${mac}" | tr ':' '-' | tr 'A-Z' 'a-z')
-      MAC_FILE="01-${MAC_FILE}"
+    # No need to copy a DTB to TFTP root: UEFI firmware is patched to
+    # DeviceTree mode, so it passes the VideoCore-prepared DTB through
+    # to the kernel via the EFI system table.
 
-      PXE_CFG="${TFTP_ROOT}/pxelinux.cfg/${MAC_FILE}"
-      printf 'DEFAULT talos\nLABEL talos\n  KERNEL vmlinuz\n  INITRD initramfs-arm64.xz\n  APPEND talos.platform=metal console=tty0 console=ttyAMA0,115200 talos.config=%s/generic?mac=%s init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on\n' \
-        "${MATCHBOX_URL}" "${mac}" > "${PXE_CFG}"
-      echo "  pxelinux.cfg/${MAC_FILE} -> ${hostname}"
+    # Write GRUB config. GRUB exposes $net_default_mac when booted via
+    # PXE, so we can pass it to Matchbox for per-node config. We use
+    # Velaryon's real IP + NodePort (30813) instead of the MetalLB VIP
+    # because bare-metal nodes in maintenance mode can't reach MetalLB
+    # IPs (BGP routes aren't available pre-Kubernetes).
+    for dir in "" "grub" "boot/grub" "EFI/BOOT"; do
+      mkdir -p "${TFTP_ROOT}/${dir}" 2>/dev/null || true
+      GRUB_CFG="${TFTP_ROOT}/${dir:+${dir}/}grub.cfg"
+
+      printf '%s\n' \
+        'set timeout=5' \
+        'set default=0' \
+        '' \
+        'menuentry "Talos Linux" {' \
+        '    linux /vmlinuz talos.platform=metal talos.halt_if_installed console=tty0 console=ttyAMA0,115200 talos.config=http://10.4.0.30:8080/generic?mac=${net_default_mac} init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_appraise=fix ima_hash=sha512 ima_template=ima-ng' \
+        '    initrd /initramfs-arm64.xz' \
+        '}' > "${GRUB_CFG}"
+      echo "  ${dir:+${dir}/}grub.cfg created"
     done
 
-    # Also create a fallback default config (no talos.config, node will
-    # enter maintenance mode for manual config assignment).
-    printf 'DEFAULT talos\nLABEL talos\n  KERNEL vmlinuz\n  INITRD initramfs-arm64.xz\n  APPEND talos.platform=metal console=tty0 console=ttyAMA0,115200 init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on\n' \
-      > "${TFTP_ROOT}/pxelinux.cfg/default"
-    echo "  pxelinux.cfg/default (maintenance mode fallback)"
-
     # --- Create per-node TFTP directories --------------------------------
-    # Each Pi fetches from /<serial>/ on the TFTP server. We create a
-    # directory per serial with symlinks to the shared files and per-node
-    # config.txt + cmdline.txt.
+    # VideoCore fetches firmware from /<serial>/ on the TFTP server.
+    # Each node gets a directory with symlinks to shared firmware and
+    # a custom config.txt for EDK2 UEFI boot.
     echo "Setting up per-node TFTP directories..."
 
     grep -v '^[[:space:]]*#' "${INVENTORY}" | grep -v '^[[:space:]]*$' | while read -r serial hostname mac ip model; do
       DIR="${TFTP_ROOT}/${serial}"
       mkdir -p "${DIR}"
 
-      # Symlink everything from _shared/ into the node directory.
-      # This gives each node the full SD card boot partition via TFTP:
-      # u-boot.bin, start4.elf, all DTBs, overlays, etc.
+      # Clean the directory completely: remove ALL symlinks and regular
+      # files, then recreate from scratch. This catches stale artifacts
+      # from previous approaches (U-Boot, manual testing, etc.) without
+      # needing to enumerate every possible leftover filename.
+      find "${DIR}" -maxdepth 1 -type l -delete
+      find "${DIR}" -maxdepth 1 -type f -delete
+
+      # Symlink shared files, but skip items we override or don't want.
       for f in "${SHARED}"/*; do
         name=$(basename "${f}")
-        # Skip config.txt — we may need to customize per-node
-        [ "${name}" = "config.txt" ] && continue
-        # For directories (like overlays/), create a symlink to the dir
+        # Skip: we write our own config.txt; kernel/u-boot not needed
+        # (UEFI firmware is loaded as armstub, not as kernel=).
+        case "${name}" in
+          config.txt|u-boot.bin|kernel*.img) continue ;;
+        esac
         ln -sf "../_shared/${name}" "${DIR}/${name}"
       done
 
-      # config.txt - use the one from the Talos image as-is.
-      # It already sets kernel=u-boot.bin, arm_64bit=1, etc.
-      cp "${SHARED}/config.txt" "${DIR}/config.txt"
+      # Write UEFI-compatible config.txt. The key difference from the
+      # Talos default: armstub=RPI_EFI.fd replaces kernel=u-boot.bin.
+      # EDK2 UEFI provides full EFI services including network protocols,
+      # which GRUB needs for PXE boot.
+      printf '%s\n' \
+        'arm_64bit=1' \
+        'arm_boost=1' \
+        'enable_uart=1' \
+        'uart_2ndstage=1' \
+        'enable_gic=1' \
+        'armstub=RPI_EFI.fd' \
+        'disable_commandline_tags=1' \
+        'disable_overscan=1' \
+        'device_tree_address=0x3e0000' \
+        'device_tree_end=0x400000' \
+        'dtoverlay=miniuart-bt' \
+        'dtoverlay=upstream-pi4' > "${DIR}/config.txt"
 
       echo "  ${serial} -> ${hostname} (${model})"
     done

@@ -32,6 +32,19 @@ spec:
       labels:
         app: matchbox
     spec:
+      nodeSelector:
+        kubernetes.io/hostname: velaryon
+      tolerations:
+        - key: gpu
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
+        - key: platform
+          operator: Equal
+          value: "x86"
+          effect: NoSchedule
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       containers:
         - name: matchbox
           image: quay.io/poseidon/matchbox:v0.11.0
