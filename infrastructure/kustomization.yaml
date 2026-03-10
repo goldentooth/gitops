@@ -24,4 +24,5 @@ resources:
   - ntfy
   - gateway-crds
   - gateway
+  - nic-watchdog
 patches:
