@@ -1,0 +1,134 @@
+---
+# Node-level and Kubernetes workload alerts.
+# These fire into Alertmanager, which routes to ntfy.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: cluster-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    # -----------------------------------------------------------------
+    # Node health alerts
+    # -----------------------------------------------------------------
+    - name: node-health
+      rules:
+        - alert: NodeDown
+          expr: up{job="node-exporter"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Node {{ $labels.instance }} is down"
+            description: "Node exporter on {{ $labels.instance }} has been unreachable for 5 minutes."
+
+        - alert: NodeHighCPU
+          expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High CPU on {{ $labels.instance }}"
+            description: "CPU usage on {{ $labels.instance }} has been above 90% for 10 minutes."
+
+        - alert: NodeHighMemory
+          expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 90
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High memory on {{ $labels.instance }}"
+            description: "Memory usage on {{ $labels.instance }} is above 90%."
+
+        - alert: NodeDiskPressure
+          expr: (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|fuse.lxcfs"}) * 100 > 85
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Disk filling up on {{ $labels.instance }}"
+            description: "Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} is {{ $value | humanize }}% full."
+
+        - alert: NodeDiskCritical
+          expr: (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|fuse.lxcfs"}) * 100 > 95
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Disk nearly full on {{ $labels.instance }}"
+            description: "Filesystem {{ $labels.mountpoint }} on {{ $labels.instance }} is {{ $value | humanize }}% full. Immediate action required."
+
+        - alert: NodeNotReady
+          expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Node {{ $labels.node }} is NotReady"
+            description: "Kubernetes node {{ $labels.node }} has been in NotReady state for 5 minutes."
+
+    # -----------------------------------------------------------------
+    # Kubernetes workload alerts
+    # -----------------------------------------------------------------
+    - name: kubernetes-workloads
+      rules:
+        - alert: PodCrashLooping
+          expr: rate(kube_pod_container_status_restarts_total[15m]) * 60 * 5 > 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} is crash looping"
+            description: "Container {{ $labels.container }} in pod {{ $labels.namespace }}/{{ $labels.pod }} has been restarting."
+
+        - alert: PodNotReady
+          expr: kube_pod_status_phase{phase=~"Pending|Unknown"} == 1
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} not ready"
+            description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in {{ $labels.phase }} state for 15 minutes."
+
+        - alert: DeploymentReplicasMismatch
+          expr: kube_deployment_spec_replicas != kube_deployment_status_ready_replicas
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Deployment {{ $labels.namespace }}/{{ $labels.deployment }} replica mismatch"
+            description: "Deployment {{ $labels.namespace }}/{{ $labels.deployment }} has {{ $value }} ready replicas but expects {{ $labels.spec_replicas }}."
+
+        - alert: PVCAlmostFull
+          expr: kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes * 100 > 85
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} almost full"
+            description: "PVC {{ $labels.namespace }}/{{ $labels.persistentvolumeclaim }} is {{ $value | humanize }}% full."
+
+    # -----------------------------------------------------------------
+    # Observability stack self-monitoring
+    # -----------------------------------------------------------------
+    - name: observability-health
+      rules:
+        - alert: PrometheusStorageFilling
+          expr: (prometheus_tsdb_storage_blocks_bytes / (16 * 1024 * 1024 * 1024)) * 100 > 80
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Prometheus storage is filling up"
+            description: "Prometheus TSDB is using {{ $value | humanize }}% of its 16Gi PVC."
+
+        - alert: LokiStorageFilling
+          expr: kubelet_volume_stats_used_bytes{namespace="monitoring",persistentvolumeclaim=~".*loki.*"} / kubelet_volume_stats_capacity_bytes * 100 > 80
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Loki storage is filling up"
+            description: "Loki PVC is {{ $value | humanize }}% full."

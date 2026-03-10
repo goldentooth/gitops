@@ -123,6 +123,24 @@ spec:
             cpu: 50m
             memory: 64Mi
 
+      # Alert routing and notification config
+      config:
+        route:
+          receiver: 'ntfy'
+          group_by: ['alertname', 'namespace']
+          group_wait: 30s
+          group_interval: 5m
+          repeat_interval: 4h
+          routes:
+            - receiver: 'ntfy'
+              matchers:
+                - severity =~ "critical|warning"
+        receivers:
+          - name: 'ntfy'
+            webhook_configs:
+              - url: 'http://ntfy.ntfy.svc.cluster.local/cluster-alerts'
+                send_resolved: true
+
     # ==================================================================
     # GRAFANA
     # Visualization and dashboard interface

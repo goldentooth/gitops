@@ -21,4 +21,5 @@ resources:
   - tempo
   - alloy
   - netboot
+  - ntfy
 patches:

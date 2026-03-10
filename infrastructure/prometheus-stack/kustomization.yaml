@@ -10,3 +10,4 @@ resources:
   - repository.yaml
   - operator.yaml
   - grafana-admin-secret.yaml
+  - alerts.yaml

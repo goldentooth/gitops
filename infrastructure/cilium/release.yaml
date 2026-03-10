@@ -75,9 +75,14 @@ spec:
           - icmp
           - http
         serviceMonitor:
-          enabled: false  # Enable when you install Prometheus
+          enabled: true
+          labels:
+            release: kube-prometheus-stack
         dashboards:
-          enabled: false  # Enable when you install Grafana
+          enabled: true
+          label: grafana_dashboard
+          labelValue: "1"
+          namespace: monitoring
 
       relay:
         enabled: true
