@@ -14,7 +14,6 @@ resources:
   - prometheus-node-exporter
   - prometheus-blackbox-exporter
   - litmus
-  - seaweedfs
   - tekton
   - docker-registry
   - loki
