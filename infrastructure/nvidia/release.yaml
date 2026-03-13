@@ -39,6 +39,10 @@ spec:
         operator: Equal
         value: "true"
         effect: NoSchedule
+      - key: platform
+        operator: Equal
+        value: "x86"
+        effect: NoSchedule
       # Keep the default critical addons toleration
       - key: CriticalAddonsOnly
         operator: Exists
