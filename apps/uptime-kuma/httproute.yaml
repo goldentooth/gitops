@@ -1,0 +1,17 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: uptime-kuma
+  namespace: uptime-kuma
+spec:
+  parentRefs:
+    - name: goldentooth
+      namespace: gateway
+      sectionName: https
+  hostnames:
+    - uptime.goldentooth.net
+  rules:
+    - backendRefs:
+        - name: uptime-kuma
+          port: 80
