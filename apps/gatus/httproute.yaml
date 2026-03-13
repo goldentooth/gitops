@@ -2,16 +2,16 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: uptime-kuma
-  namespace: uptime-kuma
+  name: gatus
+  namespace: gatus
 spec:
   parentRefs:
     - name: goldentooth
       namespace: gateway
       sectionName: https
   hostnames:
-    - uptime.goldentooth.net
+    - status.goldentooth.net
   rules:
     - backendRefs:
-        - name: uptime-kuma
+        - name: gatus
           port: 80

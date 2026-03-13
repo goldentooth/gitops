@@ -6,5 +6,5 @@ resources:
   - metallb.yaml
   - podinfo.yaml
   - jupyterlab.yaml
-  - uptime-kuma.yaml
+  - gatus.yaml
 patches: []

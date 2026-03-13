@@ -1,0 +1,121 @@
+---
+# Gatus configuration — declarative endpoint monitoring with status page.
+# Monitors cluster services, external websites, and infrastructure.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gatus-config
+  namespace: gatus
+data:
+  config.yaml: |
+    storage:
+      type: sqlite
+      path: /data/gatus.db
+
+    ui:
+      title: Goldentooth Cluster Status
+      header: Goldentooth
+
+    # -- External websites --
+    endpoints:
+      - name: goldentooth.net
+        group: external
+        url: https://goldentooth.net/
+        interval: 5m
+        conditions:
+          - "[STATUS] < 400"
+          - "[RESPONSE_TIME] < 5000"
+
+      - name: clog.goldentooth.net
+        group: external
+        url: https://clog.goldentooth.net/
+        interval: 5m
+        conditions:
+          - "[STATUS] < 400"
+          - "[RESPONSE_TIME] < 5000"
+
+    # -- Gateway-exposed services (via cluster DNS) --
+      - name: Grafana
+        group: cluster
+        url: http://monitoring-kube-prometheus-stack-grafana.monitoring.svc.cluster.local:80/login
+        interval: 2m
+        conditions:
+          - "[STATUS] == 200"
+          - "[RESPONSE_TIME] < 3000"
+
+      - name: Prometheus
+        group: cluster
+        url: http://monitoring-kube-prometheus-prometheus.monitoring.svc.cluster.local:9090/-/healthy
+        interval: 2m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Alertmanager
+        group: cluster
+        url: http://monitoring-kube-prometheus-alertmanager.monitoring.svc.cluster.local:9093/-/healthy
+        interval: 2m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Loki
+        group: cluster
+        url: http://monitoring-loki.monitoring.svc.cluster.local:3100/ready
+        interval: 2m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Tempo
+        group: cluster
+        url: http://monitoring-tempo.monitoring.svc.cluster.local:3200/ready
+        interval: 2m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: httpbin
+        group: cluster
+        url: http://httpbin.httpbin.svc.cluster.local/status/200
+        interval: 2m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: ntfy
+        group: cluster
+        url: http://ntfy.ntfy.svc.cluster.local/v1/health
+        interval: 2m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Docker Registry
+        group: cluster
+        url: https://docker-registry.docker-registry.svc.cluster.local/v2/
+        client:
+          insecure: true
+        interval: 2m
+        conditions:
+          - "[STATUS] < 500"
+
+      - name: Step CA
+        group: cluster
+        url: https://step-ca.step-ca.svc.cluster.local/health
+        client:
+          insecure: true
+        interval: 2m
+        conditions:
+          - "[STATUS] == 200"
+
+    # -- Infrastructure DNS checks --
+      - name: Kubernetes API
+        group: infrastructure
+        url: https://cp.k8s.goldentooth.net:6443/healthz
+        client:
+          insecure: true
+        interval: 1m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: Blackbox Exporter
+        group: cluster
+        url: http://monitoring-prometheus-blackbox-exporter.monitoring.svc.cluster.local:9115/
+        interval: 2m
+        conditions:
+          - "[STATUS] == 200"
