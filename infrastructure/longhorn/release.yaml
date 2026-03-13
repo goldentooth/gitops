@@ -49,7 +49,8 @@ spec:
       defaultClass: true
 
     longhornManager:
-      nodeSelector: {}
+      nodeSelector:
+        node.longhorn.io/worker: "true"
       tolerations: []
 
     longhornDriver:
