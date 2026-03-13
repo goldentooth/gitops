@@ -5,7 +5,7 @@ metadata:
   name: gatus
   namespace: gatus
   labels:
-    release: kube-prometheus-stack
+    release: monitoring-kube-prometheus-stack
 spec:
   selector:
     matchLabels:
