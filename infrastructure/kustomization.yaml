@@ -21,6 +21,7 @@ resources:
   - alloy
   - netboot
   - ntfy
+  - longhorn
   - gateway-crds
   - gateway
   - nic-watchdog
