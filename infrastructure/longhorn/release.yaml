@@ -37,8 +37,6 @@ spec:
       storageMinimalAvailablePercentage: 15
       # Faster failover for stateful workloads
       nodeDownPodDeletionPolicy: delete-both-statefulset-and-deployment-pod
-      # Restrict Longhorn system components to NVMe storage nodes
-      systemManagedComponentsNodeSelector: "node.kubernetes.io/disk-type:nvme"
       # Taint toleration for if we ever taint storage nodes
       taintToleration: ""
       # Auto-salvage replicas when possible
