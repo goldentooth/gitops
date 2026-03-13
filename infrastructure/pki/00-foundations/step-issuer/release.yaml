@@ -25,6 +25,12 @@ spec:
     remediation:
       retries: 3
   values:
+    # kube-rbac-proxy image moved from gcr.io to registry.k8s.io
+    kubeRBACproxy:
+      image:
+        repository: registry.k8s.io/kubebuilder/kube-rbac-proxy
+        tag: v0.15.0
+
     # Replica count
     replicaCount: 1
 

@@ -30,6 +30,10 @@ spec:
           operator: Equal
           value: "true"
           effect: NoSchedule
+        - key: platform
+          operator: Equal
+          value: "x86"
+          effect: NoSchedule
 
       # Run as root to avoid permission issues with CUDA
       securityContext:
