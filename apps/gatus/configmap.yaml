@@ -111,7 +111,7 @@ data:
           insecure: true
         interval: 1m
         conditions:
-          - "[STATUS] == 200"
+          - "[STATUS] == any(200, 401)"
 
       - name: Blackbox Exporter
         group: cluster
