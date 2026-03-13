@@ -12,8 +12,10 @@ data:
       fields:
         service: registry
     storage:
-      filesystem:
-        rootdirectory: /var/lib/registry
+      s3:
+        region: garage
+        bucket: docker-registry
+        regionendpoint: http://garage-s3.garage.svc.cluster.local:3900
       delete:
         enabled: true
       cache:

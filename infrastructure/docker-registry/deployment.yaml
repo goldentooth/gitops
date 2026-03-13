@@ -23,10 +23,18 @@ spec:
         - containerPort: 5000
           name: registry
           protocol: TCP
+        env:
+        - name: REGISTRY_STORAGE_S3_ACCESSKEY
+          valueFrom:
+            secretKeyRef:
+              name: registry-s3-secret
+              key: accesskey
+        - name: REGISTRY_STORAGE_S3_SECRETKEY
+          valueFrom:
+            secretKeyRef:
+              name: registry-s3-secret
+              key: secretkey
         volumeMounts:
-        # Registry data storage
-        - name: registry-data
-          mountPath: /var/lib/registry
         # Registry configuration
         - name: config
           mountPath: /etc/docker/registry
@@ -57,9 +65,6 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 5
       volumes:
-      - name: registry-data
-        persistentVolumeClaim:
-          claimName: registry-data
       - name: config
         configMap:
           name: registry-config
