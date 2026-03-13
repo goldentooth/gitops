@@ -4,6 +4,8 @@ kind: Service
 metadata:
   name: jupyterlab
   namespace: jupyterlab
+  annotations:
+    gatus.io/enabled: "true"
 spec:
   type: ClusterIP
   selector:

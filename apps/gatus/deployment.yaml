@@ -16,6 +16,7 @@ spec:
       labels:
         app: gatus
     spec:
+      serviceAccountName: gatus
       containers:
         - name: gatus
           image: twinproduction/gatus:v5.16.0

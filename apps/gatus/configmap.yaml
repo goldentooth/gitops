@@ -16,7 +16,26 @@ data:
       title: Goldentooth Cluster Status
       header: Goldentooth
 
-    # -- External websites --
+    # Auto-discover Services annotated with gatus.io/enabled: "true".
+    # Annotations control behavior:
+    #   gatus.io/enabled: "true"           — opt in
+    #   gatus.io/path: "/healthz"          — health-check path (default: /health)
+    #   gatus.io/port: "8080"              — override port
+    kubernetes:
+      auto-discover: true
+      cluster-mode: cluster
+      # Namespaces to exclude (noisy or irrelevant)
+      excluded-service-suffixes:
+        - -headless
+        - -memberlist
+        - -operated
+        - -metrics
+      # Default conditions for auto-discovered endpoints
+      service-default-conditions:
+        - "[STATUS] < 400"
+      service-default-interval: 2m
+
+    # -- Static endpoints for Helm-managed/special services --
     endpoints:
       - name: goldentooth.net
         group: external
@@ -34,7 +53,6 @@ data:
           - "[STATUS] < 400"
           - "[RESPONSE_TIME] < 5000"
 
-    # -- Gateway-exposed services (via cluster DNS) --
       - name: Grafana
         group: cluster
         url: http://monitoring-kube-prometheus-stack-grafana.monitoring.svc.cluster.local:80/login
@@ -71,20 +89,6 @@ data:
         conditions:
           - "[STATUS] == 200"
 
-      - name: httpbin
-        group: cluster
-        url: http://httpbin.httpbin.svc.cluster.local/status/200
-        interval: 2m
-        conditions:
-          - "[STATUS] == 200"
-
-      - name: ntfy
-        group: cluster
-        url: http://ntfy.ntfy.svc.cluster.local/v1/health
-        interval: 2m
-        conditions:
-          - "[STATUS] == 200"
-
       - name: Docker Registry
         group: cluster
         url: https://docker-registry.docker-registry.svc.cluster.local/v2/
@@ -103,7 +107,6 @@ data:
         conditions:
           - "[STATUS] == 200"
 
-    # -- Infrastructure DNS checks --
       - name: Kubernetes API
         group: infrastructure
         url: https://cp.k8s.goldentooth.net:6443/healthz

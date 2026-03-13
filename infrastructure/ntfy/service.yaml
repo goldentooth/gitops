@@ -4,6 +4,9 @@ kind: Service
 metadata:
   name: ntfy
   namespace: ntfy
+  annotations:
+    gatus.io/enabled: "true"
+    gatus.io/path: /v1/health
 spec:
   type: ClusterIP
   selector:
