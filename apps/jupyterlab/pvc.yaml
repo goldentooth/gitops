@@ -1,6 +1,6 @@
 ---
 # Persistent storage for JupyterLab workspace
-# Notebooks and data persist across pod restarts via SeaweedFS
+# Notebooks and data persist across pod restarts via local-path on Velaryon's NVMe
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
