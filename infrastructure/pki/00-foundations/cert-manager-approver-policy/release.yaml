@@ -10,7 +10,7 @@ spec:
   chart:
     spec:
       chart: cert-manager-approver-policy
-      version: "0.15.x"
+      version: "0.24.x"
       sourceRef:
         kind: HelmRepository
         name: cert-manager
