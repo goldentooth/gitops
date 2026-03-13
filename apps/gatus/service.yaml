@@ -4,6 +4,8 @@ kind: Service
 metadata:
   name: gatus
   namespace: gatus
+  labels:
+    app: gatus
 spec:
   type: ClusterIP
   selector:

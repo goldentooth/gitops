@@ -8,6 +8,8 @@ metadata:
   namespace: gatus
 data:
   config.yaml: |
+    metrics: true
+
     storage:
       type: sqlite
       path: /data/gatus.db
@@ -15,6 +17,16 @@ data:
     ui:
       title: Goldentooth Cluster Status
       header: Goldentooth
+
+    alerting:
+      ntfy:
+        url: http://ntfy.ntfy.svc.cluster.local
+        topic: gatus-alerts
+        priority: 3
+        default-alert:
+          failure-threshold: 3
+          success-threshold: 2
+          send-on-resolved: true
 
     endpoints:
       - name: goldentooth.net
@@ -40,6 +52,8 @@ data:
         conditions:
           - "[STATUS] == 200"
           - "[RESPONSE_TIME] < 3000"
+        alerts:
+          - type: ntfy
 
       - name: Prometheus
         group: cluster
@@ -47,6 +61,8 @@ data:
         interval: 2m
         conditions:
           - "[STATUS] == 200"
+        alerts:
+          - type: ntfy
 
       - name: Alertmanager
         group: cluster
@@ -54,6 +70,8 @@ data:
         interval: 2m
         conditions:
           - "[STATUS] == 200"
+        alerts:
+          - type: ntfy
 
       - name: Loki
         group: cluster
@@ -61,6 +79,8 @@ data:
         interval: 2m
         conditions:
           - "[STATUS] == 200"
+        alerts:
+          - type: ntfy
 
       - name: Tempo
         group: cluster
@@ -68,6 +88,8 @@ data:
         interval: 2m
         conditions:
           - "[STATUS] == 200"
+        alerts:
+          - type: ntfy
 
       - name: Docker Registry
         group: cluster
@@ -77,6 +99,8 @@ data:
         interval: 2m
         conditions:
           - "[STATUS] < 500"
+        alerts:
+          - type: ntfy
 
       - name: Step CA
         group: cluster
@@ -86,6 +110,8 @@ data:
         interval: 2m
         conditions:
           - "[STATUS] == 200"
+        alerts:
+          - type: ntfy
 
       - name: Kubernetes API
         group: infrastructure
@@ -95,6 +121,8 @@ data:
         interval: 1m
         conditions:
           - "[STATUS] == any(200, 401)"
+        alerts:
+          - type: ntfy
 
       - name: Blackbox Exporter
         group: cluster
@@ -102,6 +130,8 @@ data:
         interval: 2m
         conditions:
           - "[STATUS] == 200"
+        alerts:
+          - type: ntfy
 
       - name: httpbin
         group: apps
@@ -109,6 +139,8 @@ data:
         interval: 2m
         conditions:
           - "[STATUS] == 200"
+        alerts:
+          - type: ntfy
 
       - name: ntfy
         group: apps
@@ -116,6 +148,8 @@ data:
         interval: 2m
         conditions:
           - "[STATUS] == 200"
+        alerts:
+          - type: ntfy
 
       - name: JupyterLab
         group: apps
@@ -123,3 +157,5 @@ data:
         interval: 2m
         conditions:
           - "[STATUS] < 400"
+        alerts:
+          - type: ntfy
