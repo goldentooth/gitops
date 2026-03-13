@@ -8,6 +8,8 @@ metadata:
     app: gatus
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: gatus
