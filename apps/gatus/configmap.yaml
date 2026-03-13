@@ -16,26 +16,6 @@ data:
       title: Goldentooth Cluster Status
       header: Goldentooth
 
-    # Auto-discover Services annotated with gatus.io/enabled: "true".
-    # Annotations control behavior:
-    #   gatus.io/enabled: "true"           — opt in
-    #   gatus.io/path: "/healthz"          — health-check path (default: /health)
-    #   gatus.io/port: "8080"              — override port
-    kubernetes:
-      auto-discover: true
-      cluster-mode: cluster
-      # Namespaces to exclude (noisy or irrelevant)
-      excluded-service-suffixes:
-        - -headless
-        - -memberlist
-        - -operated
-        - -metrics
-      # Default conditions for auto-discovered endpoints
-      service-default-conditions:
-        - "[STATUS] < 400"
-      service-default-interval: 2m
-
-    # -- Static endpoints for Helm-managed/special services --
     endpoints:
       - name: goldentooth.net
         group: external
@@ -122,3 +102,24 @@ data:
         interval: 2m
         conditions:
           - "[STATUS] == 200"
+
+      - name: httpbin
+        group: apps
+        url: http://httpbin.httpbin.svc.cluster.local/status/200
+        interval: 2m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: ntfy
+        group: apps
+        url: http://ntfy.ntfy.svc.cluster.local/v1/health
+        interval: 2m
+        conditions:
+          - "[STATUS] == 200"
+
+      - name: JupyterLab
+        group: apps
+        url: http://jupyterlab.jupyterlab.svc.cluster.local/
+        interval: 2m
+        conditions:
+          - "[STATUS] < 400"

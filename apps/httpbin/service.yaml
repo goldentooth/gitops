@@ -3,9 +3,6 @@ kind: Service
 metadata:
   name: httpbin
   namespace: httpbin
-  annotations:
-    gatus.io/enabled: "true"
-    gatus.io/path: /status/200
 spec:
   type: ClusterIP
   ports:
