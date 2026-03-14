@@ -1,0 +1,77 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: chaos-mesh
+  namespace: flux-system
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: chaos-mesh
+      version: ">=2.8.0 <3.0.0"
+      sourceRef:
+        kind: HelmRepository
+        name: chaos-mesh
+        namespace: flux-system
+      interval: 12h
+
+  targetNamespace: chaos-mesh
+  install:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+  upgrade:
+    crds: CreateReplace
+    remediation:
+      retries: 3
+
+  values:
+    # ==================================================================
+    # CONTROLLER MANAGER
+    # Only component that needs to be always-on. Watches chaos CRDs
+    # and orchestrates fault injection via the daemon.
+    # ==================================================================
+    controllerManager:
+      replicaCount: 1
+      # Pin to Pi 5 nodes — better CPU for webhook handling
+      nodeSelector:
+        cpu.arch: armv8.2-a
+      resources:
+        requests:
+          cpu: 25m
+          memory: 128Mi
+        limits:
+          cpu: 250m
+          memory: 512Mi
+
+    # ==================================================================
+    # CHAOS DAEMON
+    # Runs on nodes where you want to inject faults (network chaos,
+    # I/O faults, process kills, etc). Needs privileged access.
+    # Start with Pi 5 NVMe nodes only — expand via nodeSelector later.
+    # ==================================================================
+    chaosDaemon:
+      nodeSelector:
+        cpu.arch: armv8.2-a
+      resources:
+        requests:
+          cpu: 25m
+          memory: 64Mi
+        limits:
+          cpu: 250m
+          memory: 256Mi
+
+    # ==================================================================
+    # DASHBOARD — DISABLED
+    # Drive everything via CRDs + GitOps. No UI overhead.
+    # ==================================================================
+    dashboard:
+      create: false
+
+    # ==================================================================
+    # DNS SERVER — DISABLED
+    # Only needed for DNSChaos experiments. Enable when needed.
+    # ==================================================================
+    dnsServer:
+      create: false

@@ -1,12 +1,11 @@
 ---
-# litmus namespace for LitmusChaos ChaosCenter
-# Chaos engineering platform for testing Kubernetes resilience
+# chaos-mesh namespace for Chaos Mesh chaos engineering platform
+# Privileged security context required for fault injection
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: litmus
+  name: chaos-mesh
   labels:
-    # Privileged security context for chaos experiments
     pod-security.kubernetes.io/enforce: privileged
     pod-security.kubernetes.io/audit: privileged
     pod-security.kubernetes.io/warn: privileged

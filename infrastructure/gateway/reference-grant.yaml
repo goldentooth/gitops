@@ -25,9 +25,6 @@ spec:
       namespace: jupyterlab
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      namespace: litmus
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
       namespace: gatus
   to:
     - group: gateway.networking.k8s.io

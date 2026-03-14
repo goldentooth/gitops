@@ -12,7 +12,7 @@ resources:
   - prometheus-stack
   - prometheus-node-exporter
   - prometheus-blackbox-exporter
-  - litmus
+  - chaos-mesh
   - docker-registry
   - loki
   - tempo
