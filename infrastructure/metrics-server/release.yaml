@@ -39,5 +39,18 @@ spec:
         cpu: 50m
         memory: 64Mi
       limits:
-        cpu: 100m
-        memory: 128Mi
+        cpu: 200m
+        memory: 256Mi
+
+    # Pi nodes are slow — give the server time to start before
+    # probes start killing it
+    livenessProbe:
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 5
+    readinessProbe:
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 5
