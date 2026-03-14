@@ -43,6 +43,9 @@ spec:
       autoSalvage: true
       # Disable auto-upgrade of engine images (manual control)
       autoDeletePodWhenVolumeDetachedUnexpectedly: true
+      # Restrict system-managed components (engine-image, CSI plugin,
+      # instance-manager) to NVMe nodes only
+      systemManagedComponentsNodeSelector: "node.kubernetes.io/disk-type:nvme"
 
     persistence:
       defaultClassReplicaCount: 2
