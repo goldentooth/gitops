@@ -11,4 +11,3 @@ resources:
   - httpbin.yaml
   - jupyterlab.yaml
   - litmus.yaml
-  - tekton.yaml

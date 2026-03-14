@@ -49,11 +49,13 @@ spec:
       defaultClass: true
 
     longhornManager:
-      nodeSelector: {}
+      nodeSelector:
+        node.kubernetes.io/disk-type: nvme
       tolerations: []
 
     longhornDriver:
-      nodeSelector: {}
+      nodeSelector:
+        node.kubernetes.io/disk-type: nvme
       tolerations:
         - key: node.kubernetes.io/not-ready
           operator: Exists

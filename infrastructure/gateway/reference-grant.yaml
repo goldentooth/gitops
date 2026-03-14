@@ -28,9 +28,6 @@ spec:
       namespace: litmus
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      namespace: tekton-pipelines
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
       namespace: gatus
   to:
     - group: gateway.networking.k8s.io
