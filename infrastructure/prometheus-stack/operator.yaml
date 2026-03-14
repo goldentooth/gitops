@@ -81,7 +81,7 @@ spec:
         # Resources for Prometheus pods
         resources:
           limits:
-            cpu: 500m
+            cpu: 1000m
             memory: 2Gi  # Needs RAM for in-memory storage + processing
           requests:
             cpu: 250m
