@@ -183,15 +183,29 @@ spec:
       enabled: true
 
     # ==================================================================
+    # DEFAULT ALERT RULES
+    # ==================================================================
+    # Talos Linux runs control plane components as static pods that
+    # aren't scrapeable via standard ServiceMonitor paths, and Cilium
+    # replaces kube-proxy entirely. These alerts will never resolve,
+    # so we disable them.
+    defaultRules:
+      disabled:
+        KubeControllerManagerDown: true
+        KubeSchedulerDown: true
+        KubeProxyDown: true
+
+    # ==================================================================
     # DEFAULT SERVICE MONITORS
     # Pre-configured scrapers for K8s components
     # ==================================================================
-    # These are all enabled by default and create ServiceMonitors for:
-    # - kubelet (node-level metrics)
-    # - kube-apiserver
-    # - kube-controller-manager
-    # - kube-scheduler
-    # - kube-proxy
-    # - coreDNS
-    #
-    # You can explore these with: kubectl get servicemonitor -n monitoring
+    # Talos runs control plane components as static pods that aren't
+    # scrapeable via the standard Service/Endpoints path. Cilium replaces
+    # kube-proxy. Disable the ServiceMonitors that will never find targets
+    # to avoid permanent TargetDown alerts.
+    kubeControllerManager:
+      enabled: false
+    kubeScheduler:
+      enabled: false
+    kubeProxy:
+      enabled: false
