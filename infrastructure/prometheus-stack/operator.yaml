@@ -78,6 +78,10 @@ spec:
                   storage: 16Gi
         retention: 7d
 
+        # Must run on NVMe nodes — Longhorn PVC requires CSI driver
+        nodeSelector:
+          node.kubernetes.io/disk-type: nvme
+
         # Resources for Prometheus pods
         resources:
           limits:
@@ -100,6 +104,10 @@ spec:
     # ==================================================================
     alertmanager:
       alertmanagerSpec:
+        # Must run on NVMe nodes — Longhorn PVC requires CSI driver
+        nodeSelector:
+          node.kubernetes.io/disk-type: nvme
+
         storage:
           volumeClaimTemplate:
             spec:
