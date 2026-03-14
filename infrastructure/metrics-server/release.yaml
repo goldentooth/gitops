@@ -1,0 +1,43 @@
+---
+# Metrics Server provides the Kubernetes Metrics API (metrics.k8s.io),
+# enabling `kubectl top nodes/pods` and HorizontalPodAutoscaler support.
+#
+# On Talos Linux, kubelet serves self-signed certificates that
+# metrics-server can't verify, so we pass --kubelet-insecure-tls.
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: metrics-server
+  namespace: flux-system
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: metrics-server
+      version: ">=3.0.0 <4.0.0"
+      sourceRef:
+        kind: HelmRepository
+        name: metrics-server
+        namespace: flux-system
+      interval: 12h
+
+  targetNamespace: kube-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+
+  values:
+    # Talos kubelet uses self-signed certs
+    args:
+      - --kubelet-insecure-tls
+
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 100m
+        memory: 128Mi

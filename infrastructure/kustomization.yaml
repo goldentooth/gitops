@@ -24,4 +24,5 @@ resources:
   - gateway-crds
   - gateway
   - nic-watchdog
+  - metrics-server
 patches:
