@@ -26,10 +26,6 @@ spec:
     force: true
     remediation:
       retries: 3
-  valuesFrom:
-    - kind: Secret
-      name: step-ca-inject-secrets
-      optional: false
   values:
     # Replica count (only 1 supported)
     replicaCount: 1
@@ -91,10 +87,9 @@ spec:
           J4y32A==
           -----END CERTIFICATE-----
       secrets:
-        # Passwords provided via SOPS-encrypted Secret (valuesFrom)
-        # Values must be base64-encoded
-        ca_password: ""
-        provisioner_password: ""
+        # Base64-encoded passwords
+        ca_password: d0trSnhDYmhSN2ZIRUFjaFI1NGZhSEQ1bEhWeGRkZmI=
+        provisioner_password: MGVuNFVHUmxPcWhycjU5Zk1qSlhwdkhVTjVJbUxlbWU=
         x509:
           # The intermediate CA key is already encrypted with the CA password
           # (AES-256-CBC), so it's safe to store inline
