@@ -20,10 +20,6 @@ spec:
     remediation:
       retries: 3
   upgrade:
-    # force: true needed for one-time migration from bootstrap to inject mode
-    # because bootstrap creates Secrets with custom types (smallstep.com/ca-password)
-    # that are immutable, while inject mode creates them as Opaque
-    force: true
     remediation:
       retries: 3
   values:
@@ -55,7 +51,6 @@ spec:
         minTLSCertDuration: 5m
 
     # Inject mode - declaratively provide CA material and config
-    # Sensitive values (passwords, intermediate CA key) provided via valuesFrom Secret
     inject:
       enabled: true
       certificates:
