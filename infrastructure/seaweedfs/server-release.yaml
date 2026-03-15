@@ -1,0 +1,131 @@
+---
+# SeaweedFS distributed storage system
+# Components: master (1), volume (4 on NVMe Pi 5 nodes), filer (1)
+# Data stored on NVMe drives mounted at /var/lib/longhorn on Pi 5 nodes
+# Replication "001" = 1 extra copy on another volume server
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: seaweedfs
+  namespace: flux-system
+spec:
+  interval: 30m
+  targetNamespace: seaweedfs
+  chart:
+    spec:
+      chart: seaweedfs
+      version: ">=4.17.0 <5.0.0"
+      sourceRef:
+        kind: HelmRepository
+        name: seaweedfs
+        namespace: flux-system
+  install:
+    createNamespace: false
+    remediation:
+      retries: 3
+    timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+    timeout: 10m
+
+  values:
+    global:
+      enableReplication: true
+      replicationPlacement: "001"
+      monitoring:
+        enabled: false
+
+    # ================================================================
+    # MASTER - cluster coordinator (1 replica)
+    # ================================================================
+    master:
+      enabled: true
+      replicas: 1
+      data:
+        type: "hostPath"
+        hostPathPrefix: /var/lib/longhorn
+      logs:
+        type: "emptyDir"
+      nodeSelector: |
+        node.kubernetes.io/disk-type: nvme
+      # Allow co-location with other SeaweedFS components on same node
+      affinity: ""
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: 250m
+          memory: 256Mi
+      extraEnvironmentVars:
+        WEED_MASTER_VOLUME_GROWTH_COPY_1: "7"
+        WEED_MASTER_VOLUME_GROWTH_COPY_2: "6"
+        WEED_MASTER_VOLUME_GROWTH_COPY_3: "3"
+        WEED_MASTER_VOLUME_GROWTH_COPY_OTHER: "1"
+
+    # ================================================================
+    # VOLUME SERVERS - store actual file data (4 replicas, one per NVMe)
+    # ================================================================
+    volume:
+      enabled: true
+      replicas: 4
+      dataDirs:
+        - name: data1
+          type: "hostPath"
+          hostPathPrefix: /var/lib/longhorn
+          maxVolumes: 0
+      logs:
+        type: "emptyDir"
+      nodeSelector: |
+        node.kubernetes.io/disk-type: nvme
+      compactionMBps: "25"
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+
+    # ================================================================
+    # FILER - filesystem layer over volume servers (1 replica)
+    # ================================================================
+    filer:
+      enabled: true
+      replicas: 1
+      data:
+        type: "hostPath"
+        hostPathPrefix: /var/lib/longhorn
+      logs:
+        type: "emptyDir"
+      nodeSelector: |
+        node.kubernetes.io/disk-type: nvme
+      # Allow co-location with master on same node
+      affinity: ""
+      s3:
+        enabled: false
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+      extraEnvironmentVars:
+        WEED_MYSQL_ENABLED: "false"
+        WEED_LEVELDB2_ENABLED: "true"
+        WEED_FILER_OPTIONS_RECURSIVE_DELETE: "false"
+        WEED_FILER_BUCKETS_FOLDER: "/buckets"
+
+    # ================================================================
+    # DISABLED COMPONENTS
+    # ================================================================
+    s3:
+      enabled: false
+    admin:
+      enabled: false
+    worker:
+      enabled: false
+    cosi:
+      enabled: false

@@ -1,0 +1,53 @@
+---
+# SeaweedFS CSI driver - enables Kubernetes PVCs backed by SeaweedFS
+# Creates StorageClass "seaweedfs" for dynamic provisioning
+# Node plugin (DaemonSet) runs on all nodes to allow volume consumption anywhere
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: seaweedfs-csi-driver
+  namespace: flux-system
+spec:
+  interval: 30m
+  targetNamespace: seaweedfs
+  dependsOn:
+    - name: seaweedfs
+  chart:
+    spec:
+      chart: seaweedfs-csi-driver
+      version: ">=0.2.0 <1.0.0"
+      sourceRef:
+        kind: HelmRepository
+        name: seaweedfs-csi-driver
+        namespace: flux-system
+  install:
+    createNamespace: false
+    remediation:
+      retries: 3
+    timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+    timeout: 10m
+
+  values:
+    seaweedfsFiler: "seaweedfs-filer.seaweedfs.svc.cluster.local:8888"
+    storageClassName: seaweedfs
+    isDefaultStorageClass: false
+
+    driverName: seaweedfs-csi-driver
+
+    controller:
+      replicas: 1
+
+    node:
+      enabled: true
+
+    mountService:
+      enabled: true
+
+    csiAttacher:
+      enabled: true
+
+    csiSnapshotter:
+      enabled: false
