@@ -17,7 +17,7 @@ spec:
       interval: 12h
 
   targetNamespace: falco
-  timeout: 10m
+  timeout: 15m
   install:
     crds: CreateReplace
     remediation:
