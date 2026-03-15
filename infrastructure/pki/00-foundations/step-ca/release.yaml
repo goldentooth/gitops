@@ -20,6 +20,10 @@ spec:
     remediation:
       retries: 3
   upgrade:
+    # force: true needed for one-time migration from bootstrap to inject mode
+    # because bootstrap creates Secrets with custom types (smallstep.com/ca-password)
+    # that are immutable, while inject mode creates them as Opaque
+    force: true
     remediation:
       retries: 3
   valuesFrom:
