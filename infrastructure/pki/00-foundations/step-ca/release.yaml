@@ -150,7 +150,6 @@ spec:
                       - "*.goldentooth.local"
                       - "*.goldentooth.net"
                       - "*.svc.cluster.local"
-                      - "*.*.svc.cluster.local"
                     ip:
                       - "10.0.0.0/8"
             tls:
