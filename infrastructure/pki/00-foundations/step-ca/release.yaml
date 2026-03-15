@@ -87,12 +87,12 @@ spec:
           J4y32A==
           -----END CERTIFICATE-----
         # intermediate_ca_key provided via SOPS-encrypted Secret (valuesFrom)
-        intermediate_ca_key: REPLACED_BY_VALUESFORM
+        intermediate_ca_key: ""
       secrets:
         # Passwords provided via SOPS-encrypted Secret (valuesFrom)
         # Values must be base64-encoded
-        ca_password: REPLACED_BY_VALUESFORM
-        provisioner_password: REPLACED_BY_VALUESFORM
+        ca_password: ""
+        provisioner_password: ""
       config:
         files:
           ca.json:
