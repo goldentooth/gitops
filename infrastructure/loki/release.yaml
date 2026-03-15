@@ -91,7 +91,7 @@ spec:
 
       persistence:
         enabled: true
-        storageClass: longhorn
+        storageClass: seaweedfs
         size: 16Gi
 
     # ==================================================================
