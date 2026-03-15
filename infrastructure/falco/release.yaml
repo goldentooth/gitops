@@ -51,7 +51,7 @@ spec:
         enabled: true
       http_output:
         enabled: true
-        url: http://falco-falcosidekick.falco.svc:2801
+        url: http://falco-falco-falcosidekick.falco.svc:2801
         insecure: true
       webserver:
         enabled: true
