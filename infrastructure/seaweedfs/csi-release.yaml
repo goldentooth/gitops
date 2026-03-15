@@ -31,7 +31,7 @@ spec:
     timeout: 10m
 
   values:
-    seaweedfsFiler: "seaweedfs-filer.seaweedfs.svc.cluster.local:8888"
+    seaweedfsFiler: "seaweedfs-seaweedfs-filer.seaweedfs.svc.cluster.local:8888"
     storageClassName: seaweedfs
     isDefaultStorageClass: false
 
