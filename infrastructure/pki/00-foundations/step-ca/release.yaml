@@ -96,8 +96,17 @@ spec:
         ca_password: ""
         provisioner_password: ""
         x509:
-          # intermediate_ca_key provided via SOPS-encrypted Secret (valuesFrom)
-          intermediate_ca_key: ""
+          # The intermediate CA key is already encrypted with the CA password
+          # (AES-256-CBC), so it's safe to store inline
+          intermediate_ca_key: |
+            -----BEGIN EC PRIVATE KEY-----
+            Proc-Type: 4,ENCRYPTED
+            DEK-Info: AES-256-CBC,258c5e172b543c98eb05d4591b5cbf25
+
+            n4DthGZ3oir57b9sRwPF2EKh0Z7UK3S41u8QsvIdHobTCEdpcNmrsFm/aqgF1P8P
+            9opjyjjHQlmtz1nSG55GxANdAOHm++4ZVneBGCiXn75C26HeMVSpqSQKLrarjGFc
+            jUcg52epYiRoyWFEnyvlSvhbnP4j1JDhIKteqqy5qSk=
+            -----END EC PRIVATE KEY-----
       config:
         files:
           ca.json:
