@@ -86,13 +86,14 @@ spec:
           9fHUB6QtwkLL+b39OTxaWyICIQDVQqhIzIWoQStr4EpACmzsgOe24PFTR2dkmKHo
           J4y32A==
           -----END CERTIFICATE-----
-        # intermediate_ca_key provided via SOPS-encrypted Secret (valuesFrom)
-        intermediate_ca_key: ""
       secrets:
         # Passwords provided via SOPS-encrypted Secret (valuesFrom)
         # Values must be base64-encoded
         ca_password: ""
         provisioner_password: ""
+        x509:
+          # intermediate_ca_key provided via SOPS-encrypted Secret (valuesFrom)
+          intermediate_ca_key: ""
       config:
         files:
           ca.json:
