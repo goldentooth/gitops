@@ -19,7 +19,6 @@ resources:
   - alloy
   - netboot
   - ntfy
-  - longhorn
   - seaweedfs
   - garage
   - gateway-crds
