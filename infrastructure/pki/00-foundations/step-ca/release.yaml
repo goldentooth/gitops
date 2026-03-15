@@ -22,6 +22,10 @@ spec:
   upgrade:
     remediation:
       retries: 3
+  valuesFrom:
+    - kind: Secret
+      name: step-ca-inject-secrets
+      optional: false
   values:
     # Replica count (only 1 supported)
     replicaCount: 1
@@ -50,11 +54,127 @@ spec:
         maxTLSCertDuration: 24h
         minTLSCertDuration: 5m
 
-    # Bootstrap configuration - auto-generate CA with JWK provisioner on first run
-    bootstrap:
+    # Inject mode - declaratively provide CA material and config
+    inject:
       enabled: true
-      configmaps: true
-      secrets: true
+      certificates:
+        root_ca: |
+          -----BEGIN CERTIFICATE-----
+          MIIBtjCCAV2gAwIBAgIQH5uxDTiYKnnh0NJ+WkSF6zAKBggqhkjOPQQDAjA6MRcw
+          FQYDVQQKEw5Hb2xkZW50b290aCBDQTEfMB0GA1UEAxMWR29sZGVudG9vdGggQ0Eg
+          Um9vdCBDQTAeFw0yNTExMTUyMjEyMjBaFw0zNTExMTMyMjEyMjBaMDoxFzAVBgNV
+          BAoTDkdvbGRlbnRvb3RoIENBMR8wHQYDVQQDExZHb2xkZW50b290aCBDQSBSb290
+          IENBMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvZNhpjhP5b//310bvNhNqTbp
+          adRuBGsF0lkySqoieja5uusUdgqro6tuakf7cs6txQ0MjKobh2eylXxVGr23dKNF
+          MEMwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQEwHQYDVR0OBBYE
+          FHSBBXddN5vJw3B/onigX8+YUQS/MAoGCCqGSM49BAMCA0cAMEQCIA/6LC8B6ods
+          IC3YaUcW3NMmJ/YVq2mYvZtxI79Ej7wjAiAWfe4VbKSONyYBQks0S2H07aPThz9e
+          GjLOHkp8fLHKpQ==
+          -----END CERTIFICATE-----
+        intermediate_ca: |
+          -----BEGIN CERTIFICATE-----
+          MIIB4DCCAYagAwIBAgIQExaygeEeqX6Cz3s8OftYhTAKBggqhkjOPQQDAjA6MRcw
+          FQYDVQQKEw5Hb2xkZW50b290aCBDQTEfMB0GA1UEAxMWR29sZGVudG9vdGggQ0Eg
+          Um9vdCBDQTAeFw0yNTExMTUyMjEyMjFaFw0zNTExMTMyMjEyMjFaMEIxFzAVBgNV
+          BAoTDkdvbGRlbnRvb3RoIENBMScwJQYDVQQDEx5Hb2xkZW50b290aCBDQSBJbnRl
+          cm1lZGlhdGUgQ0EwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARklIJ4XbRGieG8
+          cx9X23cL+rSuVc1Pfnob03mkPCfdt6txAOlRcpgtmuX+qhSYK6/du+0lZUHPHuy7
+          eYjVy+oBo2YwZDAOBgNVHQ8BAf8EBAMCAQYwEgYDVR0TAQH/BAgwBgEB/wIBADAd
+          BgNVHQ4EFgQUrytnBih9nS/QiKQ2Vwi58+wg1ZcwHwYDVR0jBBgwFoAUdIEFd103
+          m8nDcH+ieKBfz5hRBL8wCgYIKoZIzj0EAwIDSAAwRQIgfm0cRV78TQPzoIOSUx91
+          9fHUB6QtwkLL+b39OTxaWyICIQDVQqhIzIWoQStr4EpACmzsgOe24PFTR2dkmKHo
+          J4y32A==
+          -----END CERTIFICATE-----
+        intermediate_ca_key: REPLACED_BY_VALUESFORM
+      secrets:
+        ca_password: REPLACED_BY_VALUESFORM
+        provisioner_password: REPLACED_BY_VALUESFORM
+      config:
+        files:
+          ca.json: |
+            {
+            	"root": "/home/step/certs/root_ca.crt",
+            	"federatedRoots": null,
+            	"crt": "/home/step/certs/intermediate_ca.crt",
+            	"key": "/home/step/secrets/intermediate_ca_key",
+            	"address": ":9000",
+            	"insecureAddress": "",
+            	"dnsNames": [
+            		"step-ca.goldentooth.net",
+            		"step-ca.step-ca.svc.cluster.local"
+            	],
+            	"logger": {
+            		"format": "text"
+            	},
+            	"db": {
+            		"type": "badgerv2",
+            		"dataSource": "/home/step/db",
+            		"badgerFileLoadingMode": ""
+            	},
+            	"authority": {
+            		"provisioners": [
+            			{
+            				"type": "JWK",
+            				"name": "admin",
+            				"key": {
+            					"use": "sig",
+            					"kty": "EC",
+            					"kid": "gNmIYw4NLWUVXHBpt4UcewBXd2olt1fLFC241p1IyCE",
+            					"crv": "P-256",
+            					"alg": "ES256",
+            					"x": "4Cq__L6-wBHc9-kUV--38qF_0mla3l1Sz1ypZUMQFrk",
+            					"y": "0FC0WYK6tEEw-fdwr4LzvYxEeldCRvB6ZfBaqjRtxV0"
+            				},
+            				"encryptedKey": "eyJhbGciOiJQQkVTMi1IUzI1NitBMTI4S1ciLCJjdHkiOiJqd2sranNvbiIsImVuYyI6IkEyNTZHQ00iLCJwMmMiOjEwMDAwMCwicDJzIjoiaktPRjQxdU52QS1qaDlKWEZBWWtEQSJ9.WqiqrI2LHC8p_jBBh6x3zk4xc3RU4ZtZYz553DpEka9Q4cYcyGs37g.rh_A6-jsyRs-84Vc.dosG9zEnYmDQohqoiPPTDkOrfXfiDbaW5Mlpk9UoS9QYxmgfQC0KRMb9K3Bs-2Zr58UBBPGQ2Zjr-NTROxMND04WSfbQDgBgVhDV9lJ5lRUwmE9qPOwZUnO40P3EiwQFxyiRdhYPI_7s57MachWJPoJVxcWW4D3G4AToRkXxtlYW1UY2ssyTCXC0iId1KrEBe4Yope2ednC-o65emEGtkurqJ9JxLdo2pUAXYltr-D3YlbADkMcMpgWvu3fUETnSk44zICeq3O9kVDItv8MqwZRfDFOqfXsyoy8QhRzoiZqXrqQJMBvLytp5Moedd--GKj4z-ZZRUiV4yv_5Hsc.qef2fPFQARZOs0QlXv65JA",
+            				"claims": {
+            					"defaultTLSCertDuration": "24h",
+            					"maxTLSCertDuration": "24h",
+            					"minTLSCertDuration": "5m"
+            				}
+            			},
+            			{
+            				"type": "ACME",
+            				"name": "acme",
+            				"claims": {
+            					"defaultTLSCertDuration": "24h",
+            					"maxTLSCertDuration": "24h",
+            					"minTLSCertDuration": "5m"
+            				}
+            			}
+            		],
+            		"policy": {
+            			"x509": {
+            				"allow": {
+            					"dns": [
+            						"*.goldentooth.local",
+            						"*.goldentooth.net",
+            						"*.svc.cluster.local",
+            						"*.*.svc.cluster.local"
+            					],
+            					"ip": [
+            						"10.0.0.0/8"
+            					]
+            				}
+            			}
+            		}
+            	},
+            	"tls": {
+            		"cipherSuites": [
+            			"TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
+            			"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"
+            		],
+            		"minVersion": 1.2,
+            		"maxVersion": 1.3,
+            		"renegotiation": false
+            	}
+            }
+          defaults.json: |
+            {
+            	"ca-url": "https://step-ca.goldentooth.net",
+            	"ca-config": "/home/step/config/ca.json",
+            	"fingerprint": "c733522c1d640662cca00f19524d861c69ba4d193be5e41b28b2b9efa024b126",
+            	"root": "/home/step/certs/root_ca.crt"
+            }
 
     # Resource limits
     resources:
