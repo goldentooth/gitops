@@ -83,6 +83,7 @@ spec:
       config:
         alertmanager:
           hostport: http://monitoring-kube-prometheus-alertmanager.monitoring.svc:9093
+          endpoint: /api/v2/alerts
           minimumpriority: warning
         webhook:
           address: http://ntfy.ntfy.svc:80/falco
