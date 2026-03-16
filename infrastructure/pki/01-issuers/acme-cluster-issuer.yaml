@@ -1,0 +1,27 @@
+---
+# ClusterIssuer for step-ca ACME provisioner
+# This allows any namespace to request certificates via standard ACME protocol
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: step-ca-acme
+spec:
+  acme:
+    # step-ca ACME directory URL (internal cluster service)
+    server: https://step-ca.step-ca.svc.cluster.local/acme/acme/directory
+
+    # Private CA — cert-manager needs to trust our root
+    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJ0akNDQVYyZ0F3SUJBZ0lRSDV1eERUaVlLbm5oME5KK1drU0Y2ekFLQmdncWhrak9QUVFEQWpBNk1SY3cKRlFZRFZRUUtFdzVIYjJ4a1pXNTBiMjkwYUNCRFFURWZNQjBHQTFVRUF4TVdSMjlzWkdWdWRHOXZkR2dnUTBFZwpVbTl2ZENCRFFUQWVGdzB5TlRFeE1UVXlNakV5TWpCYUZ3MHpOVEV4TVRNeU1qRXlNakJhTURveEZ6QVZCZ05WCkJBb1REa2R2YkdSbGJuUnZiM1JvSUVOQk1SOHdIUVlEVlFRREV4WkhiMnhrWlc1MGIyOTBhQ0JEUVNCU2IyOTAKSUVOQk1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRXZaTmhwamhQNWIvLzMxMGJ2TmhOcVRicAphZFJ1QkdzRjBsa3lTcW9pZWphNXV1c1VkZ3FybzZ0dWFrZjdjczZ0eFEwTWpLb2JoMmV5bFh4VkdyMjNkS05GCk1FTXdEZ1lEVlIwUEFRSC9CQVFEQWdFR01CSUdBMVVkRXdFQi93UUlNQVlCQWY4Q0FRRXdIUVlEVlIwT0JCWUUKRkhTQkJYZGRONXZKdzNCL29uaWdYOCtZVVFTL01Bb0dDQ3FHU000OUJBTUNBMGNBTUVRQ0lBLzZMQzhCNm9kcwpJQzNZYVVjVzNOTW1KL1lWcTJtWXZadHhJNzlFajd3akFpQVdmZTRWYktTT055WUJRa3MwUzJIMDdhUFRoejllCkdqTE9Ia3A4ZkxIS3BRPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+
+    # ACME account private key storage
+    privateKeySecretRef:
+      name: step-ca-acme-account-key
+
+    # HTTP-01 solver via Cilium Gateway API
+    solvers:
+      - http01:
+          gatewayHTTPRoute:
+            parentRefs:
+              - name: goldentooth
+                namespace: gateway
+                kind: Gateway

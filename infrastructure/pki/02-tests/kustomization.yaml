@@ -2,5 +2,6 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
+  - acme-test-certificate.yaml
   - canary-certificate.yaml
   - test-certificate.yaml

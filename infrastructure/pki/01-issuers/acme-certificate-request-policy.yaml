@@ -1,0 +1,34 @@
+---
+# CertificateRequestPolicy for auto-approving ACME certificates
+# Mirrors the step-ca JWK policy with the same domain/duration constraints
+apiVersion: policy.cert-manager.io/v1alpha1
+kind: CertificateRequestPolicy
+metadata:
+  name: approve-acme-requests
+spec:
+  allowed:
+    commonName:
+      value: "*"
+    dnsNames:
+      values:
+        - "*.goldentooth.local"
+        - "*.goldentooth.net"
+        - "*.svc.cluster.local"
+        - "*.*.svc.cluster.local"
+    ipAddresses:
+      values:
+        - "10.*"
+    subject:
+      organizations:
+        values:
+          - "Goldentooth"
+
+  constraints:
+    maxDuration: 24h
+    minDuration: 5m
+
+  selector:
+    issuerRef:
+      name: step-ca-acme
+      kind: ClusterIssuer
+      group: cert-manager.io

@@ -12,6 +12,7 @@ rules:
     verbs:
       - use
     resourceNames:
+      - approve-acme-requests
       - approve-step-ca-requests
 ---
 # ClusterRoleBinding for cert-manager to use the policy
