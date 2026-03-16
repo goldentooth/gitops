@@ -40,6 +40,9 @@ spec:
       servicemonitor:
         enabled: false
 
+    # Enable Gateway API support for ACME HTTP-01 solvers
+    featureGates: ExperimentalGatewayAPISupport=true
+
     # Resource limits for the controller
     resources:
       requests:
