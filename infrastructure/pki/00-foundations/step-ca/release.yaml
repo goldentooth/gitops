@@ -22,6 +22,15 @@ spec:
   upgrade:
     remediation:
       retries: 3
+  valuesFrom:
+    - kind: Secret
+      name: step-ca-secrets
+      valuesKey: ca_password
+      targetPath: inject.secrets.ca_password
+    - kind: Secret
+      name: step-ca-secrets
+      valuesKey: provisioner_password
+      targetPath: inject.secrets.provisioner_password
   values:
     # Replica count (only 1 supported)
     replicaCount: 1
@@ -82,9 +91,6 @@ spec:
           J4y32A==
           -----END CERTIFICATE-----
       secrets:
-        # Base64-encoded passwords
-        ca_password: d0trSnhDYmhSN2ZIRUFjaFI1NGZhSEQ1bEhWeGRkZmI=
-        provisioner_password: MGVuNFVHUmxPcWhycjU5Zk1qSlhwdkhVTjVJbUxlbWU=
         x509:
           # The intermediate CA key is already encrypted with the CA password
           # (AES-256-CBC), so it's safe to store inline
