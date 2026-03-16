@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - acme-certificate-request-policy.yaml
   - acme-cluster-issuer.yaml
+  - aws-route53-secret.yaml
   - certificate-request-policy.yaml
   - policy-rbac.yaml
   - step-cluster-issuer.yaml

@@ -4,4 +4,5 @@ kind: Kustomization
 resources:
   - acme-test-certificate.yaml
   - canary-certificate.yaml
+  - dns01-test-certificate.yaml
   - test-certificate.yaml

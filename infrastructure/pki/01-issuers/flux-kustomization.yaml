@@ -16,6 +16,11 @@ spec:
   path: ./infrastructure/pki/01-issuers
   prune: true
   wait: true
+  # SOPS decryption for AWS Route 53 credentials
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
   # Depend on PKI foundations being ready
   dependsOn:
     - name: pki-foundations

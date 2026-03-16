@@ -1,0 +1,30 @@
+---
+# Test certificate to validate DNS-01 challenge via Route 53
+# Uses the label selector to route to the DNS-01 solver
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: dns01-test-certificate
+  namespace: cert-test
+  labels:
+    acme.cert-manager.io/dns01-solver: "true"
+spec:
+  secretName: dns01-test-tls-secret
+
+  # Certificate duration (24 hours to match policy)
+  duration: 24h
+  renewBefore: 8h
+
+  subject:
+    organizations:
+      - Goldentooth
+
+  commonName: dns01-test.goldentooth.net
+
+  dnsNames:
+    - dns01-test.goldentooth.net
+
+  issuerRef:
+    name: step-ca-acme
+    kind: ClusterIssuer
+    group: cert-manager.io

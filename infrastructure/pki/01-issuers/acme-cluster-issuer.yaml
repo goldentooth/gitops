@@ -17,8 +17,23 @@ spec:
     privateKeySecretRef:
       name: step-ca-acme-account-key
 
-    # HTTP-01 solver via Cilium Gateway API
+    # Solvers: DNS-01 for wildcard/explicit requests, HTTP-01 as default
     solvers:
+      # DNS-01 via Route 53 — required for wildcard certs, works without
+      # gateway/DNS propagation dependencies
+      - selector:
+          matchLabels:
+            acme.cert-manager.io/dns01-solver: "true"
+        dns01:
+          route53:
+            region: us-east-1
+            accessKeyIDSecretRef:
+              name: aws-route53-credentials
+              key: access-key-id
+            secretAccessKeySecretRef:
+              name: aws-route53-credentials
+              key: secret-access-key
+      # HTTP-01 via Cilium Gateway API — default for non-wildcard certs
       - http01:
           gatewayHTTPRoute:
             parentRefs:
