@@ -183,5 +183,10 @@ spec:
     # Enable session affinity
     sessionAffinity: true
 
+    # Restrict socket-level LB to host namespace only — fixes hairpin 503
+    # when pods on the same node as the gateway envoy hit the LB VIP
+    socketLB:
+      hostNamespaceOnly: true
+
     # Configure policy enforcement
     policyEnforcementMode: default  # Can be 'default', 'always', or 'never'
