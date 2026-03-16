@@ -40,8 +40,12 @@ spec:
       servicemonitor:
         enabled: false
 
-    # Enable Gateway API support for ACME HTTP-01 solvers
-    featureGates: ExperimentalGatewayAPISupport=true
+    # Controller configuration — enable Gateway API for ACME HTTP-01 solvers
+    config:
+      apiVersion: controller.config.cert-manager.io/v1alpha1
+      kind: ControllerConfiguration
+      featureGates:
+        ExperimentalGatewayAPISupport: true
 
     # Resource limits for the controller
     resources:
