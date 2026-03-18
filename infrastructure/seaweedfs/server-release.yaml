@@ -104,7 +104,11 @@ spec:
       # Allow co-location with master on same node
       affinity: ""
       s3:
-        enabled: false
+        enabled: true
+        port: 8333
+        allowEmptyFolder: false
+        enableAuth: true
+        existingConfigSecret: seaweedfs-s3-credentials
       resources:
         requests:
           cpu: 50m

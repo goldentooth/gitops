@@ -21,7 +21,6 @@ resources:
   - netboot
   - ntfy
   - seaweedfs
-  - garage
   - gateway-crds
   - gateway
   - nic-watchdog

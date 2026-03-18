@@ -13,9 +13,11 @@ data:
         service: registry
     storage:
       s3:
-        region: garage
+        region: us-east-1
         bucket: docker-registry
-        regionendpoint: http://garage-s3.garage.svc.cluster.local:3900
+        regionendpoint: http://seaweedfs-seaweedfs-s3.seaweedfs.svc.cluster.local:8333
+      redirect:
+        disable: true
       delete:
         enabled: true
       cache:

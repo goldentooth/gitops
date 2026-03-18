@@ -7,3 +7,4 @@ resources:
   - server-release.yaml
   - csi-repository.yaml
   - csi-release.yaml
+  - s3-credentials.secret.yaml
