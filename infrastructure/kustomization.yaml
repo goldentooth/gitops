@@ -26,4 +26,5 @@ resources:
   - gateway
   - nic-watchdog
   - metrics-server
+  - nats
 patches:

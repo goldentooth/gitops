@@ -1,0 +1,84 @@
+---
+# HelmRelease for NATS
+# 3-node pub/sub messaging cluster
+# No JetStream, no persistent storage
+# Metrics exposed for Prometheus scraping
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: nats
+  namespace: flux-system
+spec:
+  interval: 10m
+  chart:
+    spec:
+      chart: nats
+      version: ">=1.0.0 <2.0.0"
+      sourceRef:
+        kind: HelmRepository
+        name: nats
+        namespace: flux-system
+      interval: 1h
+
+  targetNamespace: nats
+  install:
+    createNamespace: false
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+
+  values:
+    config:
+      cluster:
+        enabled: true
+        replicas: 3
+
+      jetstream:
+        enabled: false
+
+      monitor:
+        enabled: true
+        port: 8222
+
+    container:
+      image:
+        # NATS publishes multi-arch images (amd64 + arm64)
+        repository: nats
+        tag: "2.11-alpine"
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: 200m
+          memory: 256Mi
+
+    # Enable nats-box for CLI access
+    natsBox:
+      enabled: true
+      container:
+        image:
+          repository: natsio/nats-box
+          # Use chart default tag (0.19.2) — no override needed
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+
+    # Prometheus metrics via sidecar exporter
+    promExporter:
+      enabled: true
+      port: 7777
+      podMonitor:
+        enabled: true
+
+    service:
+      # ClusterIP is fine — NATS only needs to be reachable inside the cluster
+      ports:
+        nats:
+          enabled: true
