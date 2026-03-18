@@ -1,7 +1,6 @@
 ---
 # HelmRelease for NATS
-# 3-node pub/sub messaging cluster
-# No JetStream, no persistent storage
+# 3-node pub/sub messaging cluster with JetStream persistence
 # Metrics exposed for Prometheus scraping
 apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
@@ -36,7 +35,14 @@ spec:
         replicas: 3
 
       jetstream:
-        enabled: false
+        enabled: true
+        fileStore:
+          enabled: true
+          dir: /data
+          pvc:
+            enabled: true
+            size: 5Gi
+            storageClassName: seaweedfs
 
       monitor:
         enabled: true
