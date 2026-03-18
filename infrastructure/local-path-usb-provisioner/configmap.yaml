@@ -1,6 +1,7 @@
 ---
 # ConfigMap for USB SSD provisioner
-# Only maps the 6 nodes with USB SSDs
+# Scheduling to USB nodes is controlled by workload nodeSelector on
+# the label storage.goldentooth.net/usb=true (set in Talos machine config)
 # This provisioner instance ONLY handles USB storage
 apiVersion: v1
 kind: ConfigMap
@@ -11,30 +12,6 @@ data:
   config.json: |-
     {
       "nodePathMap": [
-        {
-          "node": "erenford",
-          "paths": ["/var/mnt/usb/local-path-provisioner"]
-        },
-        {
-          "node": "fenn",
-          "paths": ["/var/mnt/usb/local-path-provisioner"]
-        },
-        {
-          "node": "gardener",
-          "paths": ["/var/mnt/usb/local-path-provisioner"]
-        },
-        {
-          "node": "inchfield",
-          "paths": ["/var/mnt/usb/local-path-provisioner"]
-        },
-        {
-          "node": "karstark",
-          "paths": ["/var/mnt/usb/local-path-provisioner"]
-        },
-        {
-          "node": "lipps",
-          "paths": ["/var/mnt/usb/local-path-provisioner"]
-        },
         {
           "node": "DEFAULT_PATH_FOR_NON_LISTED_NODES",
           "paths": ["/var/mnt/usb/local-path-provisioner"]
