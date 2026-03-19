@@ -6,5 +6,6 @@ resources:
   - admin-secret.yaml
   - repository.yaml
   - release.yaml
+  - runner-config.yaml
   - runner-secret.yaml
   - runner-deployment.yaml
