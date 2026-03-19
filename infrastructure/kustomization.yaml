@@ -26,4 +26,5 @@ resources:
   - nic-watchdog
   - metrics-server
   - nats
+  - forgejo
 patches:
