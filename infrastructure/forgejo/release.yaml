@@ -1,4 +1,7 @@
 ---
+# Forgejo: self-hosted git forge mirroring GitHub repos, with Actions CI
+# for building Docker images on-cluster via Kaniko.
+# Runs on NVMe (Pi 5) nodes, SQLite for simplicity, SeaweedFS for persistence.
 apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
 metadata:
