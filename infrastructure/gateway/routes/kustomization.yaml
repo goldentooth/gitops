@@ -10,3 +10,4 @@ resources:
   - hubble.yaml
   - httpbin.yaml
   - jupyterlab.yaml
+  - forgejo.yaml
