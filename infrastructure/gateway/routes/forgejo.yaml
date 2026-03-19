@@ -13,5 +13,5 @@ spec:
     - git.goldentooth.net
   rules:
     - backendRefs:
-        - name: forgejo-http
+        - name: forgejo-forgejo-http
           port: 3000
