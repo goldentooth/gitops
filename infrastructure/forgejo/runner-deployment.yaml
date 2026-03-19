@@ -56,10 +56,12 @@ spec:
         - name: runner
           image: code.forgejo.org/forgejo/runner:6.3.1
           command:
-            - forgejo-runner
-            - daemon
-            - --config
-            - /etc/runner/config.yaml
+            - sh
+            - -c
+            - |
+              # Wait for DinD sidecar to create the Docker socket
+              while [ ! -S /var/run/docker.sock ]; do sleep 1; done
+              exec forgejo-runner daemon --config /etc/runner/config.yaml
           env:
             - name: DOCKER_HOST
               value: unix:///var/run/docker.sock
