@@ -1,0 +1,42 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forgejo-runner
+  namespace: forgejo
+  labels:
+    app: forgejo-runner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: forgejo-runner
+  template:
+    metadata:
+      labels:
+        app: forgejo-runner
+    spec:
+      nodeSelector:
+        node.kubernetes.io/disk-type: nvme
+      containers:
+        - name: runner
+          image: code.forgejo.org/forgejo/runner:6.3.1
+          env:
+            - name: FORGEJO_RUNNER_INSTANCE
+              value: https://forgejo-forgejo-http.forgejo.svc.cluster.local:3000
+            - name: FORGEJO_RUNNER_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: forgejo-runner
+                  key: token
+            - name: FORGEJO_RUNNER_NAME
+              value: bramble-runner
+            - name: FORGEJO_RUNNER_LABELS
+              value: "ubuntu-latest:docker://node:20-bookworm"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "2"
+              memory: 1Gi
