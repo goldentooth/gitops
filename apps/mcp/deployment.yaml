@@ -1,0 +1,40 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: goldentooth-mcp
+  namespace: goldentooth-mcp
+  labels:
+    app: goldentooth-mcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: goldentooth-mcp
+  template:
+    metadata:
+      labels:
+        app: goldentooth-mcp
+    spec:
+      containers:
+        - name: goldentooth-mcp
+          image: registry.goldentooth.net/goldentooth-mcp:latest # {"$imagepolicy": "flux-system:mcp"}
+          ports:
+            - name: dev
+              containerPort: 8080
+              protocol: TCP
+            - name: auth
+              containerPort: 8443
+              protocol: TCP
+          env:
+            - name: GOLDENTOOTH_MCP_DEV
+              value: "true"
+            - name: RUST_LOG
+              value: "info"
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi

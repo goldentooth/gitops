@@ -7,4 +7,5 @@ resources:
   - podinfo.yaml
   - jupyterlab.yaml
   - gatus.yaml
+  - mcp
 patches: []

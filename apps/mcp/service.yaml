@@ -1,0 +1,20 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: goldentooth-mcp
+  namespace: goldentooth-mcp
+  labels:
+    app: goldentooth-mcp
+spec:
+  selector:
+    app: goldentooth-mcp
+  ports:
+    - name: dev
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+    - name: auth
+      port: 8443
+      targetPort: 8443
+      protocol: TCP
