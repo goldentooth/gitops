@@ -1,0 +1,63 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: forgejo
+  namespace: flux-system
+spec:
+  interval: 30m
+  targetNamespace: forgejo
+  chart:
+    spec:
+      chart: forgejo
+      version: ">=16.0.0 <17.0.0"
+      sourceRef:
+        kind: HelmRepository
+        name: forgejo
+        namespace: flux-system
+      interval: 12h
+  install:
+    createNamespace: false
+    remediation:
+      retries: 3
+    timeout: 10m
+  upgrade:
+    remediation:
+      retries: 3
+    timeout: 10m
+  values:
+    image:
+      rootless: true
+
+    gitea:
+      admin:
+        existingSecret: forgejo-admin
+      config:
+        actions:
+          ENABLED: true
+        mirror:
+          ENABLED: true
+          MIN_INTERVAL: 5m
+        server:
+          DOMAIN: git.goldentooth.net
+          ROOT_URL: https://git.goldentooth.net/
+        service:
+          DISABLE_REGISTRATION: true
+        database:
+          DB_TYPE: sqlite3
+
+    persistence:
+      enabled: true
+      storageClass: seaweedfs
+      size: 10Gi
+
+    nodeSelector:
+      node.kubernetes.io/disk-type: nvme
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: "1"
+        memory: 512Mi
