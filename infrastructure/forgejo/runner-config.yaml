@@ -1,5 +1,6 @@
 ---
 # Runner daemon configuration — labels determine which jobs this runner accepts.
+# docker_host points to the DinD sidecar's socket.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -20,4 +21,4 @@ data:
     container:
       network: ""
       privileged: false
-      docker_host: "-"
+      docker_host: unix:///var/run/docker.sock

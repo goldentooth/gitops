@@ -1,6 +1,7 @@
 ---
 # Forgejo Actions runner — registers via shared secret, then runs as daemon.
 # Init container creates .runner file; main container runs the daemon.
+# DinD sidecar provides Docker Engine for container-based job execution.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -26,6 +27,8 @@ spec:
         - name: runner-config
           configMap:
             name: forgejo-runner-config
+        - name: docker-sock
+          emptyDir: {}
       initContainers:
         - name: register
           image: code.forgejo.org/forgejo/runner:6.3.1
@@ -57,11 +60,16 @@ spec:
             - daemon
             - --config
             - /etc/runner/config.yaml
+          env:
+            - name: DOCKER_HOST
+              value: unix:///var/run/docker.sock
           volumeMounts:
             - name: runner-data
               mountPath: /data
             - name: runner-config
               mountPath: /etc/runner
+            - name: docker-sock
+              mountPath: /var/run
           workingDir: /data
           resources:
             requests:
@@ -70,3 +78,20 @@ spec:
             limits:
               cpu: "2"
               memory: 1Gi
+        - name: dind
+          image: docker:27-dind
+          securityContext:
+            privileged: true
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: ""
+          volumeMounts:
+            - name: docker-sock
+              mountPath: /var/run
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
