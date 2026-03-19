@@ -23,7 +23,7 @@ spec:
           image: code.forgejo.org/forgejo/runner:6.3.1
           env:
             - name: FORGEJO_RUNNER_INSTANCE
-              value: https://forgejo-forgejo-http.forgejo.svc.cluster.local:3000
+              value: http://forgejo-forgejo-http.forgejo.svc.cluster.local:3000
             - name: FORGEJO_RUNNER_SECRET
               valueFrom:
                 secretKeyRef:
