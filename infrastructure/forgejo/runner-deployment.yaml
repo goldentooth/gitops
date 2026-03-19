@@ -1,4 +1,6 @@
 ---
+# Forgejo Actions runner — registers via shared secret, then runs as daemon.
+# Init container creates .runner file; main container runs the daemon.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -18,19 +20,43 @@ spec:
     spec:
       nodeSelector:
         node.kubernetes.io/disk-type: nvme
-      containers:
-        - name: runner
+      volumes:
+        - name: runner-data
+          emptyDir: {}
+      initContainers:
+        - name: register
           image: code.forgejo.org/forgejo/runner:6.3.1
+          command:
+            - forgejo-runner
+            - create-runner-file
+            - --connect
+            - --instance
+            - http://forgejo-forgejo-http.forgejo.svc.cluster.local:3000
+            - --name
+            - bramble-runner
+            - --secret
+            - $(FORGEJO_RUNNER_SECRET)
           env:
-            - name: FORGEJO_RUNNER_INSTANCE
-              value: http://forgejo-forgejo-http.forgejo.svc.cluster.local:3000
             - name: FORGEJO_RUNNER_SECRET
               valueFrom:
                 secretKeyRef:
                   name: forgejo-runner
                   key: token
-            - name: FORGEJO_RUNNER_NAME
-              value: bramble-runner
+          volumeMounts:
+            - name: runner-data
+              mountPath: /data
+          workingDir: /data
+      containers:
+        - name: runner
+          image: code.forgejo.org/forgejo/runner:6.3.1
+          command:
+            - forgejo-runner
+            - daemon
+          volumeMounts:
+            - name: runner-data
+              mountPath: /data
+          workingDir: /data
+          env:
             - name: FORGEJO_RUNNER_LABELS
               value: "ubuntu-latest:docker://node:20-bookworm"
           resources:
