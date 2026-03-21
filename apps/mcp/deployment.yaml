@@ -18,7 +18,7 @@ spec:
       serviceAccountName: goldentooth-mcp
       containers:
         - name: goldentooth-mcp
-          image: registry.goldentooth.net/goldentooth-mcp:3-eddd92ca6bf7a259f9f3669854c317f5f01a2884 # {"$imagepolicy": "flux-system:mcp"}
+          image: registry.goldentooth.net/goldentooth-mcp:4-94b9a4fd1db8b38d45675b18fe4717f9180c09a0 # {"$imagepolicy": "flux-system:mcp"}
           ports:
             - name: dev
               containerPort: 8080
