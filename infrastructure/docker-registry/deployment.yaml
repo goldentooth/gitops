@@ -15,6 +15,9 @@ spec:
     metadata:
       labels:
         app: docker-registry
+      annotations:
+        # Auto-restart when registry-tls secret is renewed by cert-manager.
+        reloader.stakater.com/auto: "true"
     spec:
       containers:
       - name: registry

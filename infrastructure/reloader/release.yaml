@@ -1,0 +1,30 @@
+---
+# Stakater Reloader: auto-restarts pods when ConfigMaps/Secrets change.
+# Annotate deployments with reloader.stakater.com/auto: "true" to opt in.
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: reloader
+  namespace: flux-system
+spec:
+  interval: 30m
+  targetNamespace: reloader
+  chart:
+    spec:
+      chart: reloader
+      version: ">=1.0.0 <2.0.0"
+      sourceRef:
+        kind: HelmRepository
+        name: stakater
+        namespace: flux-system
+      interval: 12h
+  install:
+    createNamespace: false
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    reloader:
+      watchGlobally: true

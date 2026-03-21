@@ -27,4 +27,5 @@ resources:
   - metrics-server
   - nats
   - forgejo
+  - reloader
 patches:
