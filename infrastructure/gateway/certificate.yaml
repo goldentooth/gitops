@@ -28,3 +28,4 @@ spec:
     - tekton-dashboard.goldentooth.net
     - status.goldentooth.net
     - git.goldentooth.net
+    - mcp.goldentooth.net
