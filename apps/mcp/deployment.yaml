@@ -1,4 +1,3 @@
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -18,7 +17,7 @@ spec:
     spec:
       containers:
         - name: goldentooth-mcp
-          image: registry.goldentooth.net/goldentooth-mcp:latest # {"$imagepolicy": "flux-system:mcp"}
+          image: registry.goldentooth.net/goldentooth-mcp:2-f62ba56a999ec99a7375fed529acf4b336691bdb # {"$imagepolicy": "flux-system:mcp"}
           ports:
             - name: dev
               containerPort: 8080
