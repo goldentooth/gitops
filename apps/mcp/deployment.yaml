@@ -15,6 +15,7 @@ spec:
       labels:
         app: goldentooth-mcp
     spec:
+      serviceAccountName: goldentooth-mcp
       containers:
         - name: goldentooth-mcp
           image: registry.goldentooth.net/goldentooth-mcp:3-eddd92ca6bf7a259f9f3669854c317f5f01a2884 # {"$imagepolicy": "flux-system:mcp"}
@@ -33,7 +34,7 @@ spec:
           resources:
             requests:
               cpu: 25m
-              memory: 32Mi
-            limits:
-              cpu: 100m
               memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
