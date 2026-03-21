@@ -1,5 +1,6 @@
 ---
 # Scans the private registry for new goldentooth-mcp image tags.
+# Uses Step-CA root cert for TLS verification.
 apiVersion: image.toolkit.fluxcd.io/v1beta2
 kind: ImageRepository
 metadata:
@@ -8,4 +9,5 @@ metadata:
 spec:
   image: registry.goldentooth.net/goldentooth-mcp
   interval: 1m
-  insecure: true
+  certSecretRef:
+    name: registry-ca
