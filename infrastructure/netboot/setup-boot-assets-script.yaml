@@ -6,13 +6,11 @@
 # Supports both Pi 4B (EDK2 UEFI + GRUB PXE chain) and Pi 5
 # (direct kernel boot from EEPROM bootloader via TFTP).
 #
-# On subsequent restarts, skips the download if files already exist
-# and only refreshes the per-node directory structure (so inventory
-# changes take effect without re-downloading ~100MB of firmware).
-#
-# To force a re-download (e.g. after a Talos version bump), delete
-# the _shared/ and _shared_pi5/ directories in the TFTP PVC and
-# restart the DaemonSet.
+# On subsequent restarts, skips the download if version stamp files
+# match and only refreshes the per-node directory structure (so
+# inventory changes take effect without re-downloading ~100MB of
+# firmware). Bumping TALOS_VERSION or UEFI_VERSION automatically
+# invalidates the cache and triggers a fresh download.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -77,9 +75,12 @@ data:
     # We need the VideoCore firmware (start4.elf, fixup4.dat), DTBs, and
     # overlays from the Talos factory image. We do NOT use U-Boot or
     # kernel8.img from the image — EDK2 UEFI replaces U-Boot.
-    if [ -f "${SHARED}/start4.elf" ] && [ -f "${SHARED}/RPI_EFI.fd" ]; then
-      echo "Pi 4 boot assets already present in ${SHARED}, skipping download."
+    PI4_STAMP="${SHARED}/.version"
+    PI4_WANT="${TALOS_VERSION}+uefi${UEFI_VERSION}"
+    if [ -f "${PI4_STAMP}" ] && [ "$(cat "${PI4_STAMP}")" = "${PI4_WANT}" ]; then
+      echo "Pi 4 boot assets up to date (${PI4_WANT}), skipping download."
     else
+      rm -rf "${SHARED}"
       mkdir -p "${SHARED}"
 
       echo "Downloading Talos arm64 Pi 4 image (~140MB, this takes a while)..."
@@ -166,7 +167,8 @@ data:
       cp /grub/grub-arm64.efi "${SHARED}/grub-arm64.efi"
       echo "PXE GRUB binary installed (pre-built arm64-efi)."
 
-      echo "Pi 4 boot assets ready:"
+      echo "${PI4_WANT}" > "${PI4_STAMP}"
+      echo "Pi 4 boot assets ready (${PI4_WANT}):"
       ls -lh "${SHARED}/RPI_EFI.fd" "${SHARED}/start4.elf" "${SHARED}/grub-arm64.efi" 2>/dev/null || true
     fi
 
@@ -174,9 +176,11 @@ data:
     # Pi 5 boots differently: the SPI EEPROM bootloader loads config.txt,
     # device tree, and kernel directly from TFTP. No UEFI or GRUB needed.
     # We only need the BCM2712 DTBs and overlays from the factory image.
-    if [ -f "${SHARED_PI5}/bcm2712-rpi-5-b.dtb" ]; then
-      echo "Pi 5 boot assets already present in ${SHARED_PI5}, skipping download."
+    PI5_STAMP="${SHARED_PI5}/.version"
+    if [ -f "${PI5_STAMP}" ] && [ "$(cat "${PI5_STAMP}")" = "${TALOS_VERSION}" ]; then
+      echo "Pi 5 boot assets up to date (${TALOS_VERSION}), skipping download."
     else
+      rm -rf "${SHARED_PI5}"
       mkdir -p "${SHARED_PI5}"
 
       echo "Downloading Talos arm64 Pi 5 image (~140MB)..."
@@ -187,7 +191,8 @@ data:
       extract_boot_partition /tmp/metal-arm64-pi5.raw "${SHARED_PI5}"
       rm -f /tmp/metal-arm64-pi5.raw
 
-      echo "Pi 5 boot assets ready:"
+      echo "${TALOS_VERSION}" > "${PI5_STAMP}"
+      echo "Pi 5 boot assets ready (${TALOS_VERSION}):"
       ls -lh "${SHARED_PI5}/bcm2712-rpi-5-b.dtb" 2>/dev/null || echo "  WARNING: bcm2712 DTB not found!"
       ls "${SHARED_PI5}/" | head -20
     fi
@@ -196,15 +201,17 @@ data:
     # The vmlinuz from Talos is a PE-COFF EFI stub that GRUB can boot
     # directly via the linux command (Pi 4 path), and the Pi 5 EEPROM
     # bootloader can also load it directly as a kernel image.
-    if [ -f "${TFTP_ROOT}/vmlinuz" ] && [ -f "${TFTP_ROOT}/initramfs-arm64.xz" ]; then
-      echo "Kernel and initramfs already present, skipping."
+    KERNEL_STAMP="${TFTP_ROOT}/.kernel-version"
+    if [ -f "${KERNEL_STAMP}" ] && [ "$(cat "${KERNEL_STAMP}")" = "${TALOS_VERSION}" ]; then
+      echo "Kernel and initramfs up to date (${TALOS_VERSION}), skipping."
     else
       echo "Downloading Talos kernel (vmlinuz)..."
       wget -q --show-progress -O "${TFTP_ROOT}/vmlinuz" "${FACTORY_KERNEL}"
 
       echo "Downloading Talos initramfs..."
       wget -q --show-progress -O "${TFTP_ROOT}/initramfs-arm64.xz" "${FACTORY_INITRD}"
-      echo "Kernel/initramfs ready:"
+      echo "${TALOS_VERSION}" > "${KERNEL_STAMP}"
+      echo "Kernel/initramfs ready (${TALOS_VERSION}):"
       ls -lh "${TFTP_ROOT}/vmlinuz" "${TFTP_ROOT}/initramfs-arm64.xz"
     fi
 
