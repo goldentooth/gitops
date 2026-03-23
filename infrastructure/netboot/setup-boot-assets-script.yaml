@@ -225,7 +225,7 @@ data:
         'set default=0' \
         '' \
         'menuentry "Talos Linux" {' \
-        '    linux /vmlinuz talos.platform=metal talos.halt_if_installed console=tty0 console=ttyAMA0,115200 talos.config=http://10.4.0.30:8080/generic?mac=${net_default_mac} init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_appraise=fix ima_hash=sha512 ima_template=ima-ng' \
+        '    linux /vmlinuz talos.platform=metal talos.halt_if_installed console=tty0 console=ttyAMA0,115200 talos.config=http://10.4.0.30:8080/generic?mac=${net_default_mac} init_on_alloc=1 slab_nomerge pti=on consoleblank=0 nvme_core.io_timeout=4294967295 printk.devkmsg=on ima_appraise=fix ima_hash=sha512 ima_template=ima-ng modprobe.blacklist=ipmi_si,ipmi_poweroff' \
         '    initrd /initramfs-arm64.xz' \
         '}' > "${GRUB_CFG}"
       echo "  ${dir:+${dir}/}grub.cfg created"
