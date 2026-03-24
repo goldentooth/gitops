@@ -131,11 +131,14 @@ data:
       rm -f /tmp/nvram_var.bin
       echo "Patched UEFI NVRAM: SystemTableMode=2 (DeviceTree)"
 
-      # Patch NVRAM to set RamMoreThan3GB=1 (expose all RAM).
-      # By default EDK2 limits the Pi 4 to 3GB even in DeviceTree mode.
-      # On 8GB boards this means the kernel only sees 3GB. Setting this
-      # to 1 makes the firmware advertise the full memory range in the
-      # device tree, including the high region above 0x100000000.
+      # Patch NVRAM to set RamLimitTo3GB=0 (expose all RAM).
+      # EDK2 ConfigDxe uses two variables for memory policy:
+      #   PcdRamMoreThan3GB  — hardware capability flag, set dynamically
+      #                        by detecting >3GB boards. NOT read from NVRAM.
+      #   PcdRamLimitTo3GB   — policy variable, read from NVRAM via
+      #                        gRT->GetVariable(). Default=1 (limit on).
+      # Setting RamLimitTo3GB=0 disables the limit, so the firmware
+      # advertises the full memory range including >0x100000000.
       # Same GUID (ConfigDxe), same authenticated variable format.
       # This variable immediately follows SystemTableMode in the store.
       NVRAM_OFF2=$((0x3B00C4))
@@ -145,17 +148,17 @@ data:
       printf '\x00\x00\x00\x00\x00\x00\x00\x00' >> /tmp/nvram_var2.bin    # TimeStamp part 1 (8 bytes, zero)
       printf '\x00\x00\x00\x00\x00\x00\x00\x00' >> /tmp/nvram_var2.bin    # TimeStamp part 2 (8 bytes, zero)
       printf '\x00\x00\x00\x00' >> /tmp/nvram_var2.bin                     # PubKeyIndex (4 bytes, zero)
-      printf '\x1e\x00\x00\x00' >> /tmp/nvram_var2.bin                     # NameSize (30 bytes: 15 UCS-2 chars)
+      printf '\x1c\x00\x00\x00' >> /tmp/nvram_var2.bin                     # NameSize (28 bytes: 14 UCS-2 chars)
       printf '\x04\x00\x00\x00' >> /tmp/nvram_var2.bin                     # DataSize (4 bytes)
       printf '\x58\xc2\x7c\xcd\xdb\x31\xe6\x22' >> /tmp/nvram_var2.bin    # GUID part 1
       printf '\x9f\x22\x63\xb0\xb8\xee\xd6\xb5' >> /tmp/nvram_var2.bin    # GUID part 2
-      printf 'R\x00a\x00m\x00M\x00o\x00r\x00e\x00' >> /tmp/nvram_var2.bin # "RamMore" UCS-2
-      printf 'T\x00h\x00a\x00n\x003\x00G\x00B\x00\x00\x00' >> /tmp/nvram_var2.bin # "Than3GB\0" UCS-2
-      printf '\x01\x00\x00\x00' >> /tmp/nvram_var2.bin                     # Value=1 (enable >3GB)
+      printf 'R\x00a\x00m\x00L\x00i\x00m\x00i\x00t\x00' >> /tmp/nvram_var2.bin   # "RamLimit" UCS-2
+      printf 'T\x00o\x003\x00G\x00B\x00\x00\x00' >> /tmp/nvram_var2.bin          # "To3GB\0" UCS-2
+      printf '\x00\x00\x00\x00' >> /tmp/nvram_var2.bin                     # Value=0 (disable 3GB limit)
       dd if=/tmp/nvram_var2.bin of="${SHARED}/RPI_EFI.fd" \
          bs=1 seek=${NVRAM_OFF2} conv=notrunc status=none
       rm -f /tmp/nvram_var2.bin
-      echo "Patched UEFI NVRAM: RamMoreThan3GB=1 (full RAM access)"
+      echo "Patched UEFI NVRAM: RamLimitTo3GB=0 (full RAM access)"
 
       # Copy the pre-built PXE GRUB EFI binary. It's mounted from a
       # ConfigMap because grub-mkimage can't cross-compile arm64-efi
