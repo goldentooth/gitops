@@ -60,13 +60,13 @@ spec:
             httpGet:
               path: /api/stats
               port: http
-            initialDelaySeconds: 10
+            initialDelaySeconds: 600
             periodSeconds: 30
           readinessProbe:
             httpGet:
               path: /api/stats
               port: http
-            initialDelaySeconds: 5
+            initialDelaySeconds: 300
             periodSeconds: 10
       volumes:
         - name: images
