@@ -1,0 +1,23 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: forgejo-runner-gpu-config
+  namespace: forgejo
+data:
+  config.yaml: |
+    log:
+      level: info
+    runner:
+      file: .runner
+      capacity: 1
+      timeout: 3h
+      labels:
+        - "x86-64:docker://node:20-bookworm"
+        - "ubuntu-latest:docker://node:20-bookworm"
+    cache:
+      enabled: true
+    container:
+      network: ""
+      privileged: false
+      docker_host: unix:///var/run/docker.sock

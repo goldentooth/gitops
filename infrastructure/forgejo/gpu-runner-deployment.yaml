@@ -1,0 +1,109 @@
+---
+# Forgejo Actions runner for x86-64/GPU workloads on Velaryon.
+# Same pattern as the ARM runner but pinned to the GPU node.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forgejo-runner-gpu
+  namespace: forgejo
+  labels:
+    app: forgejo-runner-gpu
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: forgejo-runner-gpu
+  template:
+    metadata:
+      labels:
+        app: forgejo-runner-gpu
+    spec:
+      nodeSelector:
+        role: gpu
+      tolerations:
+        - key: gpu
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
+        - key: platform
+          operator: Equal
+          value: "x86"
+          effect: NoSchedule
+      volumes:
+        - name: runner-data
+          emptyDir: {}
+        - name: runner-config
+          configMap:
+            name: forgejo-runner-gpu-config
+        - name: docker-sock
+          emptyDir: {}
+      initContainers:
+        - name: register
+          image: code.forgejo.org/forgejo/runner:6.3.1
+          command:
+            - forgejo-runner
+            - create-runner-file
+            - --connect
+            - --instance
+            - http://forgejo-forgejo-http.forgejo.svc.cluster.local:3000
+            - --name
+            - velaryon-runner
+            - --secret
+            - $(FORGEJO_RUNNER_SECRET)
+          env:
+            - name: FORGEJO_RUNNER_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: forgejo-runner-gpu
+                  key: token
+          volumeMounts:
+            - name: runner-data
+              mountPath: /data
+          workingDir: /data
+      containers:
+        - name: runner
+          image: code.forgejo.org/forgejo/runner:6.3.1
+          securityContext:
+            runAsUser: 0
+          command:
+            - sh
+            - -c
+            - |
+              # Wait for DinD sidecar to create the Docker socket
+              while [ ! -S /var/run/docker.sock ]; do sleep 1; done
+              exec forgejo-runner daemon --config /etc/runner/config.yaml
+          env:
+            - name: DOCKER_HOST
+              value: unix:///var/run/docker.sock
+          volumeMounts:
+            - name: runner-data
+              mountPath: /data
+            - name: runner-config
+              mountPath: /etc/runner
+            - name: docker-sock
+              mountPath: /var/run
+          workingDir: /data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "4"
+              memory: 4Gi
+        - name: dind
+          image: docker:27-dind
+          securityContext:
+            privileged: true
+          env:
+            - name: DOCKER_TLS_CERTDIR
+              value: ""
+          volumeMounts:
+            - name: docker-sock
+              mountPath: /var/run
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "4"
+              memory: 4Gi
