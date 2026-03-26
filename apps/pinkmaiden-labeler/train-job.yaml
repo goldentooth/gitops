@@ -1,0 +1,67 @@
+---
+# Run: kubectl apply -f train-job.yaml
+# Re-run: kubectl delete job pinkmaiden-train -n pinkmaiden-labeler && kubectl apply -f train-job.yaml
+# Logs: kubectl logs -n pinkmaiden-labeler job/pinkmaiden-train -f
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pinkmaiden-train
+  namespace: pinkmaiden-labeler
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app: pinkmaiden-train
+    spec:
+      runtimeClassName: nvidia
+      nodeSelector:
+        role: gpu
+      tolerations:
+        - key: gpu
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
+        - key: platform
+          operator: Equal
+          value: "x86"
+          effect: NoSchedule
+      restartPolicy: Never
+      containers:
+        - name: trainer
+          image: registry.goldentooth.net/pinkmaiden-trainer:latest
+          args:
+            - --image-dir=/images
+            - --labeler-url=http://pinkmaiden-labeler.pinkmaiden-labeler.svc.cluster.local:8642
+            - --output=/output/model.pkl
+            - --device=cuda
+          env:
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: "all"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: "compute,utility"
+          resources:
+            requests:
+              cpu: "2"
+              memory: 4Gi
+              nvidia.com/gpu: "1"
+            limits:
+              cpu: "8"
+              memory: 16Gi
+              nvidia.com/gpu: "1"
+          volumeMounts:
+            - name: images
+              mountPath: /images
+              readOnly: true
+            - name: output
+              mountPath: /output
+      volumes:
+        - name: images
+          nfs:
+            server: dayne.local
+            path: /volume1/Images
+            readOnly: true
+        - name: output
+          hostPath:
+            path: /var/lib/pinkmaiden-labeler/models
+            type: DirectoryOrCreate
