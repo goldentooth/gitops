@@ -60,15 +60,15 @@ spec:
               mountPath: /data
           livenessProbe:
             httpGet:
-              path: /api/stats
+              path: /health
               port: http
-            initialDelaySeconds: 600
+            initialDelaySeconds: 10
             periodSeconds: 30
           readinessProbe:
             httpGet:
-              path: /api/stats
+              path: /health
               port: http
-            initialDelaySeconds: 300
+            initialDelaySeconds: 5
             periodSeconds: 10
       volumes:
         - name: images
