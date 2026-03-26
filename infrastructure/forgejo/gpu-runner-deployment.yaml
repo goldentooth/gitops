@@ -54,7 +54,7 @@ spec:
             - name: FORGEJO_RUNNER_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: forgejo-runner-gpu
+                  name: forgejo-runner
                   key: token
           volumeMounts:
             - name: runner-data

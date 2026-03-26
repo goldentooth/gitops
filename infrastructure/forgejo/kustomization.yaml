@@ -10,5 +10,4 @@ resources:
   - runner-secret.yaml
   - runner-deployment.yaml
   - gpu-runner-config.yaml
-  - gpu-runner-secret.yaml
   - gpu-runner-deployment.yaml
