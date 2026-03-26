@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pinkmaiden-labeler
+  namespace: pinkmaiden-labeler
+  labels:
+    app: pinkmaiden-labeler
+spec:
+  selector:
+    app: pinkmaiden-labeler
+  ports:
+    - name: http
+      port: 8642
+      targetPort: 8642
+      protocol: TCP

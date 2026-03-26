@@ -1,0 +1,81 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pinkmaiden-labeler
+  namespace: pinkmaiden-labeler
+  labels:
+    app: pinkmaiden-labeler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pinkmaiden-labeler
+  template:
+    metadata:
+      labels:
+        app: pinkmaiden-labeler
+    spec:
+      # Schedule on GPU node (Velaryon) — images are accessible there
+      nodeSelector:
+        role: gpu
+      tolerations:
+        - key: gpu
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
+        - key: platform
+          operator: Equal
+          value: "x86"
+          effect: NoSchedule
+      containers:
+        - name: labeler
+          image: registry.goldentooth.net/pinkmaiden-labeler:1-0000000000000000000000000000000000000000 # {"$imagepolicy": "flux-system:pinkmaiden-labeler"}
+          ports:
+            - name: http
+              containerPort: 8642
+              protocol: TCP
+          env:
+            - name: IMAGE_DIR
+              value: /images
+            - name: DB_PATH
+              value: /data/labels.db
+            - name: BATCH_SIZE
+              value: "100"
+            - name: THUMB_SIZE
+              value: "256"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "2"
+              memory: 1Gi
+          volumeMounts:
+            - name: images
+              mountPath: /images
+              readOnly: true
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            httpGet:
+              path: /api/stats
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/stats
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: images
+          nfs:
+            server: dayne.local
+            path: /volume1/Images
+            readOnly: true
+        - name: data
+          hostPath:
+            path: /var/lib/pinkmaiden-labeler
+            type: DirectoryOrCreate

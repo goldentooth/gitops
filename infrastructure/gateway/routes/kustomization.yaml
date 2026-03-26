@@ -12,3 +12,4 @@ resources:
   - jupyterlab.yaml
   - forgejo.yaml
   - mcp.yaml
+  - pinkmaiden-labeler.yaml

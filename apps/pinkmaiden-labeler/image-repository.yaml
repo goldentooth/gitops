@@ -1,0 +1,12 @@
+---
+# Scans the private registry for new pinkmaiden-labeler image tags.
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: pinkmaiden-labeler
+  namespace: flux-system
+spec:
+  image: registry.goldentooth.net/pinkmaiden-labeler
+  interval: 1m
+  certSecretRef:
+    name: registry-ca

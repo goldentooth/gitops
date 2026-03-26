@@ -8,4 +8,5 @@ resources:
   - jupyterlab.yaml
   - gatus.yaml
   - mcp
+  - pinkmaiden-labeler
 patches: []
