@@ -31,7 +31,7 @@ spec:
           effect: NoSchedule
       containers:
         - name: labeler
-          image: registry.goldentooth.net/pinkmaiden-labeler:13-4195504320a64c6055e381ba9da72e087b456467 # {"$imagepolicy": "flux-system:pinkmaiden-labeler"}
+          image: registry.goldentooth.net/pinkmaiden-labeler:14-40cba83299699c512dcb2fdf38ca8321e43da27d # {"$imagepolicy": "flux-system:pinkmaiden-labeler"}
           ports:
             - name: http
               containerPort: 8642
