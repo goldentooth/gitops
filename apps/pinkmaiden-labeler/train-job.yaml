@@ -29,7 +29,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: trainer
-          image: registry.goldentooth.net/pinkmaiden-trainer:latest
+          image: ghcr.io/hellholt/pinkmaiden-trainer:latest
           args:
             - --image-dir=/images
             - --labeler-url=http://pinkmaiden-labeler.pinkmaiden-labeler.svc.cluster.local:8642

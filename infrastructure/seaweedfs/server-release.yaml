@@ -114,8 +114,8 @@ spec:
           cpu: 100m
           memory: 512Mi
         limits:
-          cpu: "1"
-          memory: 1536Mi
+          cpu: "2"
+          memory: 4Gi
       extraEnvironmentVars:
         WEED_MYSQL_ENABLED: "false"
         WEED_LEVELDB2_ENABLED: "true"
