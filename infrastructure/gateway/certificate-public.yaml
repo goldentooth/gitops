@@ -1,0 +1,15 @@
+---
+# Let's Encrypt wildcard certificate for public-facing services.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: gateway-tls-public
+  namespace: gateway
+spec:
+  secretName: gateway-tls-public
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.goldentooth.net"
+    - goldentooth.net

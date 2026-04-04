@@ -18,7 +18,7 @@ spec:
         namespaces:
           from: All
 
-    # HTTPS listener — terminates TLS with Step-CA cert
+    # HTTPS listener — terminates TLS with Step-CA cert (internal/LAN)
     - name: https
       protocol: HTTPS
       port: 443
@@ -26,6 +26,20 @@ spec:
         mode: Terminate
         certificateRefs:
           - name: gateway-tls
+            namespace: gateway
+      allowedRoutes:
+        namespaces:
+          from: All
+
+    # HTTPS listener — terminates TLS with Let's Encrypt cert (public)
+    - name: https-public
+      protocol: HTTPS
+      port: 443
+      hostname: "*.goldentooth.net"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: gateway-tls-public
             namespace: gateway
       allowedRoutes:
         namespaces:

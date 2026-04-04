@@ -5,6 +5,9 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - certificate.yaml
+  - certificate-public.yaml
   - gateway.yaml
   - reference-grant.yaml
+  - ddns-rbac.yaml
+  - ddns-cronjob.yaml
   - routes/
