@@ -37,13 +37,13 @@ spec:
 
     driverName: seaweedfs-csi-driver
 
-    # Pin images to v1.4.5 - the chart's default "latest" tag is stale
-    # and doesn't include mount service support added in v1.3.6
+    # Chart 0.2.12 appVersion is v1.4.5, so image tags default correctly.
+    # image and tag are separate values — don't include tag in image field.
     seaweedfsCsiPlugin:
-      image: chrislusf/seaweedfs-csi-driver:v1.4.5
+      image: chrislusf/seaweedfs-csi-driver
     mountService:
       enabled: true
-      image: chrislusf/seaweedfs-mount:v1.4.5
+      image: chrislusf/seaweedfs-mount
 
     controller:
       replicas: 1
