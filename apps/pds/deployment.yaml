@@ -25,7 +25,7 @@ spec:
           image: ghcr.io/bluesky-social/pds:0.4
           ports:
             - name: http
-              containerPort: 3000
+              containerPort: 2583
               protocol: TCP
           env:
             - name: PDS_HOSTNAME
