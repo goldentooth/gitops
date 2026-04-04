@@ -1,0 +1,72 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pds-backup
+  namespace: pds
+  labels:
+    app: pds-backup
+spec:
+  schedule: "0 4 * * *"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: pds-backup
+        spec:
+          restartPolicy: OnFailure
+          nodeSelector:
+            node.kubernetes.io/disk-type: nvme
+          initContainers:
+            - name: sqlite-backup
+              image: keinos/sqlite3:latest
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  sqlite3 /pds/account.sqlite ".backup /tmp/backup/account.sqlite"
+                  sqlite3 /pds/sequencer.sqlite ".backup /tmp/backup/sequencer.sqlite"
+              volumeMounts:
+                - name: pds-data
+                  mountPath: /pds
+                  readOnly: true
+                - name: backup-staging
+                  mountPath: /tmp/backup
+          containers:
+            - name: backup
+              image: rclone/rclone:1.68
+              command: ["/bin/sh", "/etc/backup/backup.sh"]
+              envFrom:
+                - secretRef:
+                    name: pds-backup-credentials
+              volumeMounts:
+                - name: pds-data
+                  mountPath: /pds
+                  readOnly: true
+                - name: config
+                  mountPath: /etc/backup
+                  readOnly: true
+                - name: backup-staging
+                  mountPath: /tmp/backup
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 256Mi
+          volumes:
+            - name: pds-data
+              persistentVolumeClaim:
+                claimName: pds-data
+            - name: config
+              configMap:
+                name: pds-backup-config
+                defaultMode: 0755
+            - name: backup-staging
+              emptyDir: {}

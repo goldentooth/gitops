@@ -1,0 +1,53 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pds-backup-config
+  namespace: pds
+data:
+  rclone.conf: |
+    [seaweedfs]
+    type = s3
+    provider = Other
+    endpoint = http://seaweedfs-filer.seaweedfs.svc.cluster.local:8333
+    env_auth = false
+    access_key_id = RCLONE_SEAWEEDFS_ACCESS_KEY
+    secret_access_key = RCLONE_SEAWEEDFS_SECRET_KEY
+    force_path_style = true
+
+    [aws]
+    type = s3
+    provider = AWS
+    region = us-east-1
+    env_auth = false
+    access_key_id = RCLONE_AWS_ACCESS_KEY
+    secret_access_key = RCLONE_AWS_SECRET_KEY
+  backup.sh: |
+    #!/bin/sh
+    set -e
+
+    echo "Starting PDS backup at $(date -u)"
+
+    # SQLite snapshots already created by init container in /tmp/backup/
+
+    # Substitute secrets into rclone config
+    sed -e "s/RCLONE_SEAWEEDFS_ACCESS_KEY/$SEAWEEDFS_ACCESS_KEY/" \
+        -e "s/RCLONE_SEAWEEDFS_SECRET_KEY/$SEAWEEDFS_SECRET_KEY/" \
+        -e "s/RCLONE_AWS_ACCESS_KEY/$AWS_ACCESS_KEY_ID/" \
+        -e "s/RCLONE_AWS_SECRET_KEY/$AWS_SECRET_ACCESS_KEY/" \
+        /etc/backup/rclone.conf > /tmp/rclone.conf
+
+    # Sync to SeaweedFS
+    echo "Syncing to SeaweedFS S3..."
+    rclone sync /tmp/backup/ seaweedfs:pds-backup/db/ --config /tmp/rclone.conf
+    rclone sync /pds/blocks/ seaweedfs:pds-backup/blocks/ --config /tmp/rclone.conf
+
+    # Sync to AWS S3
+    echo "Syncing to AWS S3..."
+    rclone sync /tmp/backup/ aws:goldentooth-pds-backup/db/ --config /tmp/rclone.conf
+    rclone sync /pds/blocks/ aws:goldentooth-pds-backup/blocks/ --config /tmp/rclone.conf
+
+    # Cleanup
+    rm -f /tmp/rclone.conf
+
+    echo "Backup complete at $(date -u)"
