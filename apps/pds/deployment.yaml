@@ -42,6 +42,8 @@ spec:
               value: "did:web:api.bsky.app"
             - name: PDS_REPORT_SERVICE_URL
               value: "https://mod.bsky.app"
+            - name: PDS_REPORT_SERVICE_DID
+              value: "did:plc:ar7c4by46qjdydhdevvrndac"
             - name: PDS_CRAWLERS
               value: "https://bsky.network"
             - name: PDS_INVITE_REQUIRED
