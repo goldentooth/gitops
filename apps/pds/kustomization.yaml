@@ -1,0 +1,15 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - pvc.yaml
+  - secret.yaml
+  - deployment.yaml
+  - service.yaml
+  - cloudflared-configmap.yaml
+  - cloudflared-secret.yaml
+  - cloudflared-deployment.yaml
+  - backup-configmap.yaml
+  - backup-secret.yaml
+  - backup-cronjob.yaml
