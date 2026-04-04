@@ -28,4 +28,5 @@ resources:
   - nats
   - forgejo
   - reloader
+  - cloudflared
 patches:
