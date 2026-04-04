@@ -20,13 +20,12 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: ddns
-              image: bitnami/kubectl:1.31
+              image: alpine/k8s:1.32.4
               command:
                 - /bin/sh
                 - -c
                 - |
                   set -e
-                  # Discover public IP from multiple sources for reliability.
                   PUBLIC_IP=$(wget -qO- https://ifconfig.me || wget -qO- https://api.ipify.org || wget -qO- https://checkip.amazonaws.com)
                   if [ -z "$PUBLIC_IP" ]; then
                     echo "ERROR: could not determine public IP"
