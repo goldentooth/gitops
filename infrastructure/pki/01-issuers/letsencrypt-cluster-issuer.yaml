@@ -1,0 +1,24 @@
+---
+# ClusterIssuer for Let's Encrypt production certificates.
+# Uses DNS-01 challenge via Route53 for public TLS certs.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+
+    privateKeySecretRef:
+      name: letsencrypt-account-key
+
+    solvers:
+      - dns01:
+          route53:
+            region: us-east-1
+            accessKeyIDSecretRef:
+              name: aws-route53-credentials
+              key: access-key-id
+            secretAccessKeySecretRef:
+              name: aws-route53-credentials
+              key: secret-access-key

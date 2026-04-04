@@ -8,3 +8,4 @@ resources:
   - certificate-request-policy.yaml
   - policy-rbac.yaml
   - step-cluster-issuer.yaml
+  - letsencrypt-cluster-issuer.yaml
