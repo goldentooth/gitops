@@ -1,0 +1,59 @@
+---
+# Discovers the cluster's public IP and patches HTTPRoutes that have
+# the external-dns.alpha.kubernetes.io/target annotation set to the
+# current public IP. Runs every 5 minutes.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: ddns-updater
+  namespace: gateway
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Replace
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: ddns-updater
+          restartPolicy: OnFailure
+          containers:
+            - name: ddns
+              image: bitnami/kubectl:1.31
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  # Discover public IP from multiple sources for reliability.
+                  PUBLIC_IP=$(wget -qO- https://ifconfig.me || wget -qO- https://api.ipify.org || wget -qO- https://checkip.amazonaws.com)
+                  if [ -z "$PUBLIC_IP" ]; then
+                    echo "ERROR: could not determine public IP"
+                    exit 1
+                  fi
+                  echo "Public IP: $PUBLIC_IP"
+
+                  # Find all HTTPRoutes with the target annotation and patch them.
+                  ROUTES=$(kubectl get httproutes -A -o json | \
+                    jq -r '.items[] | select(.metadata.annotations["external-dns.alpha.kubernetes.io/target"] != null) | "\(.metadata.namespace)/\(.metadata.name)"')
+
+                  for ROUTE in $ROUTES; do
+                    NS="${ROUTE%%/*}"
+                    NAME="${ROUTE##*/}"
+                    CURRENT=$(kubectl get httproute "$NAME" -n "$NS" -o jsonpath='{.metadata.annotations.external-dns\.alpha\.kubernetes\.io/target}')
+                    if [ "$CURRENT" = "$PUBLIC_IP" ]; then
+                      echo "$NS/$NAME: already up to date"
+                    else
+                      echo "$NS/$NAME: updating $CURRENT -> $PUBLIC_IP"
+                      kubectl annotate httproute "$NAME" -n "$NS" \
+                        "external-dns.alpha.kubernetes.io/target=$PUBLIC_IP" --overwrite
+                    fi
+                  done
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+                limits:
+                  cpu: 100m
+                  memory: 64Mi
