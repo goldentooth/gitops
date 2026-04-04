@@ -47,7 +47,7 @@ spec:
             - name: PDS_CRAWLERS
               value: "https://bsky.network"
             - name: PDS_INVITE_REQUIRED
-              value: "true"
+              value: "false"
             - name: PDS_JWT_SECRET
               valueFrom:
                 secretKeyRef:
