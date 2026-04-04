@@ -34,7 +34,7 @@ spec:
 
                   # Build a batch of UPSERT changes for all public records.
                   CHANGES=""
-                  for RECORD in pds.goldentooth.net "\\052.pds.goldentooth.net"; do
+                  for RECORD in pds.goldentooth.net "*.pds.goldentooth.net"; do
                     CURRENT=$(aws route53 list-resource-record-sets \
                       --hosted-zone-id "$ZONE_ID" \
                       --query "ResourceRecordSets[?Name=='${RECORD}.' && Type=='A'].ResourceRecords[0].Value" \
