@@ -13,3 +13,4 @@ spec:
   dnsNames:
     - "*.goldentooth.net"
     - goldentooth.net
+    - "*.pds.goldentooth.net"

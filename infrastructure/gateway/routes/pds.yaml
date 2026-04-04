@@ -9,8 +9,12 @@ spec:
     - name: goldentooth
       namespace: gateway
       sectionName: https-public
+    - name: goldentooth
+      namespace: gateway
+      sectionName: https-pds-handles
   hostnames:
     - pds.goldentooth.net
+    - "*.pds.goldentooth.net"
   rules:
     - backendRefs:
         - name: pds

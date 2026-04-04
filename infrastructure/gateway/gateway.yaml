@@ -44,3 +44,17 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
+
+    # HTTPS listener for PDS handle subdomains (<name>.pds.goldentooth.net)
+    - name: https-pds-handles
+      protocol: HTTPS
+      port: 443
+      hostname: "*.pds.goldentooth.net"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: gateway-tls-public
+            namespace: gateway
+      allowedRoutes:
+        namespaces:
+          from: All

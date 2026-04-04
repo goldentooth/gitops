@@ -32,31 +32,30 @@ spec:
                   fi
                   echo "Public IP: $PUBLIC_IP"
 
-                  # Check current record value.
-                  CURRENT=$(aws route53 list-resource-record-sets \
-                    --hosted-zone-id "$ZONE_ID" \
-                    --query "ResourceRecordSets[?Name=='pds.goldentooth.net.' && Type=='A'].ResourceRecords[0].Value" \
-                    --output text 2>/dev/null || echo "NONE")
+                  # Build a batch of UPSERT changes for all public records.
+                  CHANGES=""
+                  for RECORD in pds.goldentooth.net "\\052.pds.goldentooth.net"; do
+                    CURRENT=$(aws route53 list-resource-record-sets \
+                      --hosted-zone-id "$ZONE_ID" \
+                      --query "ResourceRecordSets[?Name=='${RECORD}.' && Type=='A'].ResourceRecords[0].Value" \
+                      --output text 2>/dev/null || echo "NONE")
+                    if [ "$CURRENT" = "$PUBLIC_IP" ]; then
+                      echo "$RECORD: already up to date"
+                    else
+                      echo "$RECORD: updating $CURRENT -> $PUBLIC_IP"
+                      [ -n "$CHANGES" ] && CHANGES="${CHANGES},"
+                      CHANGES="${CHANGES}{\"Action\":\"UPSERT\",\"ResourceRecordSet\":{\"Name\":\"${RECORD}\",\"Type\":\"A\",\"TTL\":60,\"ResourceRecords\":[{\"Value\":\"${PUBLIC_IP}\"}]}}"
+                    fi
+                  done
 
-                  if [ "$CURRENT" = "$PUBLIC_IP" ]; then
-                    echo "pds.goldentooth.net: already up to date ($PUBLIC_IP)"
+                  if [ -z "$CHANGES" ]; then
+                    echo "All records up to date."
                     exit 0
                   fi
 
-                  echo "pds.goldentooth.net: updating $CURRENT -> $PUBLIC_IP"
                   aws route53 change-resource-record-sets \
                     --hosted-zone-id "$ZONE_ID" \
-                    --change-batch "{
-                      \"Changes\": [{
-                        \"Action\": \"UPSERT\",
-                        \"ResourceRecordSet\": {
-                          \"Name\": \"pds.goldentooth.net\",
-                          \"Type\": \"A\",
-                          \"TTL\": 60,
-                          \"ResourceRecords\": [{\"Value\": \"$PUBLIC_IP\"}]
-                        }
-                      }]
-                    }"
+                    --change-batch "{\"Changes\":[${CHANGES}]}"
                   echo "Done."
               env:
                 - name: ZONE_ID
