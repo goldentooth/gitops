@@ -8,7 +8,6 @@ resources:
   - jupyterlab.yaml
   - gatus.yaml
   - mcp
-  - pinkmaiden-labeler
   - theatre
   - pds
 patches: []

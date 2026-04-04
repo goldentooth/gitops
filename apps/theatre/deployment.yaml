@@ -1,0 +1,47 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: goldentooth-theatre
+  namespace: goldentooth-theatre
+  labels:
+    app: goldentooth-theatre
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: goldentooth-theatre
+  template:
+    metadata:
+      labels:
+        app: goldentooth-theatre
+    spec:
+      containers:
+        - name: goldentooth-theatre
+          image: registry.goldentooth.net/goldentooth-theatre:0-placeholder # {"$imagepolicy": "flux-system:theatre"}
+          args: ["run"]
+          env:
+            - name: THEATRE_DATA_DIR
+              value: "/data"
+            - name: RUST_LOG
+              value: "info"
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: theatre-secrets
+                  key: anthropic-api-key
+                  optional: true
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: theatre-data

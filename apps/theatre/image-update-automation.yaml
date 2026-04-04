@@ -1,9 +1,8 @@
 ---
-# Commits updated image tags back to the gitops repo.
 apiVersion: image.toolkit.fluxcd.io/v1beta2
 kind: ImageUpdateAutomation
 metadata:
-  name: pinkmaiden-labeler
+  name: theatre
   namespace: flux-system
 spec:
   interval: 1m
@@ -18,9 +17,9 @@ spec:
       author:
         name: fluxcdbot
         email: flux@goldentooth.net
-      messageTemplate: 'chore(flux): update pinkmaiden-labeler image to {{range .Changed.Changes}}{{print .NewValue}}{{end}}'
+      messageTemplate: 'chore(flux): update theatre image to {{range .Changed.Changes}}{{print .NewValue}}{{end}}'
     push:
       branch: main
   update:
-    path: ./apps/pinkmaiden-labeler
+    path: ./apps/theatre
     strategy: Setters
