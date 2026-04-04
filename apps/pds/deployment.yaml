@@ -1,0 +1,89 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pds
+  namespace: pds
+  labels:
+    app: pds
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: pds
+  template:
+    metadata:
+      labels:
+        app: pds
+    spec:
+      nodeSelector:
+        node.kubernetes.io/disk-type: nvme
+      containers:
+        - name: pds
+          image: ghcr.io/bluesky-social/pds:0.4
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: PDS_HOSTNAME
+              value: "pds.goldentooth.net"
+            - name: PDS_DATA_DIRECTORY
+              value: "/pds"
+            - name: PDS_BLOBSTORE_DISK_LOCATION
+              value: "/pds/blocks"
+            - name: PDS_DID_PLC_URL
+              value: "https://plc.directory"
+            - name: PDS_BSKY_APP_VIEW_URL
+              value: "https://api.bsky.app"
+            - name: PDS_BSKY_APP_VIEW_DID
+              value: "did:web:api.bsky.app"
+            - name: PDS_REPORT_SERVICE_URL
+              value: "https://mod.bsky.app"
+            - name: PDS_CRAWLERS
+              value: "https://bsky.network"
+            - name: PDS_INVITE_REQUIRED
+              value: "true"
+            - name: PDS_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: pds-env
+                  key: PDS_JWT_SECRET
+            - name: PDS_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pds-env
+                  key: PDS_ADMIN_PASSWORD
+            - name: PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX
+              valueFrom:
+                secretKeyRef:
+                  name: pds-env
+                  key: PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX
+          volumeMounts:
+            - name: data
+              mountPath: /pds
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /xrpc/_health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /xrpc/_health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: pds-data
