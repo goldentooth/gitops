@@ -26,7 +26,7 @@ spec:
                 - -c
                 - |
                   set -e
-                  PUBLIC_IP=$(wget -qO- https://ifconfig.me || wget -qO- https://api.ipify.org || wget -qO- https://checkip.amazonaws.com)
+                  PUBLIC_IP=$(curl -sf https://ifconfig.me || curl -sf https://api.ipify.org || curl -sf https://checkip.amazonaws.com)
                   if [ -z "$PUBLIC_IP" ]; then
                     echo "ERROR: could not determine public IP"
                     exit 1
