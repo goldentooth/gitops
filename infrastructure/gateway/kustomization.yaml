@@ -9,5 +9,6 @@ resources:
   - gateway.yaml
   - reference-grant.yaml
   - ddns-rbac.yaml
+  - ddns-secret.yaml
   - ddns-cronjob.yaml
   - routes/

@@ -4,25 +4,3 @@ kind: ServiceAccount
 metadata:
   name: ddns-updater
   namespace: gateway
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: ddns-updater
-rules:
-  - apiGroups: ["gateway.networking.k8s.io"]
-    resources: ["httproutes"]
-    verbs: ["get", "list", "patch"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: ddns-updater
-subjects:
-  - kind: ServiceAccount
-    name: ddns-updater
-    namespace: gateway
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: ddns-updater

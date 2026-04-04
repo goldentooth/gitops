@@ -1,7 +1,6 @@
 ---
-# Discovers the cluster's public IP and patches HTTPRoutes that have
-# the external-dns.alpha.kubernetes.io/target annotation set to the
-# current public IP. Runs every 5 minutes.
+# Discovers the cluster's public IP and updates Route53 A records for
+# public-facing services. Runs every 5 minutes.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -20,7 +19,7 @@ spec:
           restartPolicy: OnFailure
           containers:
             - name: ddns
-              image: alpine/k8s:1.32.4
+              image: amazon/aws-cli:2.27.31
               command:
                 - /bin/sh
                 - -c
@@ -33,26 +32,51 @@ spec:
                   fi
                   echo "Public IP: $PUBLIC_IP"
 
-                  # Find all HTTPRoutes with the target annotation and patch them.
-                  ROUTES=$(kubectl get httproutes -A -o json | \
-                    jq -r '.items[] | select(.metadata.annotations["external-dns.alpha.kubernetes.io/target"] != null) | "\(.metadata.namespace)/\(.metadata.name)"')
+                  # Check current record value.
+                  CURRENT=$(aws route53 list-resource-record-sets \
+                    --hosted-zone-id "$ZONE_ID" \
+                    --query "ResourceRecordSets[?Name=='pds.goldentooth.net.' && Type=='A'].ResourceRecords[0].Value" \
+                    --output text 2>/dev/null || echo "NONE")
 
-                  for ROUTE in $ROUTES; do
-                    NS="${ROUTE%%/*}"
-                    NAME="${ROUTE##*/}"
-                    CURRENT=$(kubectl get httproute "$NAME" -n "$NS" -o jsonpath='{.metadata.annotations.external-dns\.alpha\.kubernetes\.io/target}')
-                    if [ "$CURRENT" = "$PUBLIC_IP" ]; then
-                      echo "$NS/$NAME: already up to date"
-                    else
-                      echo "$NS/$NAME: updating $CURRENT -> $PUBLIC_IP"
-                      kubectl annotate httproute "$NAME" -n "$NS" \
-                        "external-dns.alpha.kubernetes.io/target=$PUBLIC_IP" --overwrite
-                    fi
-                  done
+                  if [ "$CURRENT" = "$PUBLIC_IP" ]; then
+                    echo "pds.goldentooth.net: already up to date ($PUBLIC_IP)"
+                    exit 0
+                  fi
+
+                  echo "pds.goldentooth.net: updating $CURRENT -> $PUBLIC_IP"
+                  aws route53 change-resource-record-sets \
+                    --hosted-zone-id "$ZONE_ID" \
+                    --change-batch "{
+                      \"Changes\": [{
+                        \"Action\": \"UPSERT\",
+                        \"ResourceRecordSet\": {
+                          \"Name\": \"pds.goldentooth.net\",
+                          \"Type\": \"A\",
+                          \"TTL\": 60,
+                          \"ResourceRecords\": [{\"Value\": \"$PUBLIC_IP\"}]
+                        }
+                      }]
+                    }"
+                  echo "Done."
+              env:
+                - name: ZONE_ID
+                  value: "Z0736727S7ZH91VKK44A"
+                - name: AWS_DEFAULT_REGION
+                  value: us-east-1
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: ddns-aws-credentials
+                      key: access-key-id
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: ddns-aws-credentials
+                      key: secret-access-key
               resources:
                 requests:
                   cpu: 10m
                   memory: 32Mi
                 limits:
                   cpu: 100m
-                  memory: 64Mi
+                  memory: 128Mi
