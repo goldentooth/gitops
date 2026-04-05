@@ -19,7 +19,7 @@ spec:
         - name: ghcr-pull-secret
       containers:
         - name: goldentooth-theatre
-          image: ghcr.io/goldentooth/theatre:9-2248fa2d8c4bcdabae853946acf8dc299bb05fc5 # {"$imagepolicy": "flux-system:theatre"}
+          image: ghcr.io/goldentooth/theatre:10-0cf3f3900d144fea91ab2f92a7a797719b9caf1a # {"$imagepolicy": "flux-system:theatre"}
           imagePullPolicy: Always
           args: ["serve"]
           env:
