@@ -1,0 +1,62 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: theatre-git-sync
+  namespace: goldentooth-theatre
+spec:
+  schedule: "0 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: git-sync
+              image: alpine/git:latest
+              env:
+                - name: FORGEJO_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: theatre-secrets
+                      key: forgejo-token
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -e
+                  apk add --no-cache --quiet openssh-client
+
+                  cd /tmp
+                  git clone --depth 1 https://theatre-sync:$FORGEJO_TOKEN@git.goldentooth.net/goldentooth/theatre.git repo
+                  cd repo
+
+                  # Copy runtime state from PVC into repo
+                  for char in /data/characters/*/; do
+                    name=$(basename "$char")
+                    dest="data/characters/$name"
+                    mkdir -p "$dest/memory" "$dest/posts"
+                    cp -r "$char/memory/" "$dest/memory/" 2>/dev/null || true
+                    cp -r "$char/posts/" "$dest/posts/" 2>/dev/null || true
+                  done
+
+                  git config user.name "theatre-sync"
+                  git config user.email "theatre-sync@goldentooth.net"
+                  git add data/characters/
+                  if ! git diff --cached --quiet; then
+                    git commit -m "chore(sync): update character runtime state"
+                    git push
+                    echo "Pushed runtime state updates"
+                  else
+                    echo "No changes to sync"
+                  fi
+              volumeMounts:
+                - name: data
+                  mountPath: /data
+                  readOnly: true
+          volumes:
+            - name: data
+              persistentVolumeClaim:
+                claimName: theatre-data
