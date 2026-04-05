@@ -5,7 +5,6 @@ metadata:
   name: theatre
   namespace: flux-system
 spec:
-  image: ghcr.io/goldentooth/theatre
+  image: registry.goldentooth.net/goldentooth-theatre
   interval: 1m
-  secretRef:
-    name: ghcr-pull-secret
+  insecure: true
