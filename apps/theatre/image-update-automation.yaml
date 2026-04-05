@@ -5,6 +5,7 @@ metadata:
   name: theatre
   namespace: flux-system
 spec:
+  suspend: true # suspended until registry ghost tag 99 is cleaned up
   interval: 1m
   sourceRef:
     kind: GitRepository
