@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: goldentooth-theatre
-          image: registry.goldentooth.net/goldentooth-theatre:7-986b68bffd661079231d9a80191e9b502b80ff51 # {"$imagepolicy": "flux-system:theatre"}
+          image: registry.goldentooth.net/goldentooth-theatre:99-9c3f3e70aa025feeae64e7f4ac3efb537cbc65e2 # {"$imagepolicy": "flux-system:theatre"}
           imagePullPolicy: Always
           args: ["serve"]
           env:
