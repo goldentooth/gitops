@@ -1,0 +1,17 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: goldentooth-theatre
+  namespace: goldentooth-theatre
+spec:
+  parentRefs:
+    - name: goldentooth
+      namespace: gateway
+      sectionName: https
+  hostnames:
+    - theatre.goldentooth.net
+  rules:
+    - backendRefs:
+        - name: goldentooth-theatre
+          port: 8080

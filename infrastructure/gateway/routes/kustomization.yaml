@@ -13,3 +13,4 @@ resources:
   - forgejo.yaml
   - mcp.yaml
   - pds.yaml
+  - theatre.yaml
