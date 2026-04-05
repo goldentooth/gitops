@@ -86,6 +86,8 @@ spec:
           image: docker:27-dind
           securityContext:
             privileged: true
+          args:
+            - --insecure-registry=registry.goldentooth.net
           env:
             - name: DOCKER_TLS_CERTDIR
               value: ""
