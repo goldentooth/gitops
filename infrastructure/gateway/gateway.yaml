@@ -31,11 +31,11 @@ spec:
         namespaces:
           from: All
 
-    # HTTPS listener — terminates TLS with Let's Encrypt cert (public)
+    # HTTPS listener — terminates TLS with Let's Encrypt cert for pds.goldentooth.net
     - name: https-public
       protocol: HTTPS
       port: 443
-      hostname: "*.goldentooth.net"
+      hostname: "pds.goldentooth.net"
       tls:
         mode: Terminate
         certificateRefs:
