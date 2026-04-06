@@ -24,7 +24,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: goldentooth-theatre
-          image: ghcr.io/goldentooth/theatre:11-7385858c67fd9517ad6baa0eff9ce1d80ba1dc5f # {"$imagepolicy": "flux-system:theatre"}
+          image: ghcr.io/goldentooth/theatre:12-da7ad763de9905c4407a312110918e90b872f6bb # {"$imagepolicy": "flux-system:theatre"}
           imagePullPolicy: Always
           args: ["serve"]
           securityContext:
