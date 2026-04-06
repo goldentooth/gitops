@@ -29,6 +29,9 @@ spec:
                   set -e
                   apk add --no-cache --quiet openssh-client
 
+                  # Trust internal CA for Forgejo TLS
+                  export GIT_SSL_CAINFO=/etc/ssl/step-ca/root_ca.crt
+
                   cd /tmp
                   git clone --depth 1 https://theatre-sync:$FORGEJO_TOKEN@git.goldentooth.net/goldentooth/theatre.git repo
                   cd repo
@@ -56,7 +59,13 @@ spec:
                 - name: data
                   mountPath: /data
                   readOnly: true
+                - name: step-ca-root
+                  mountPath: /etc/ssl/step-ca
+                  readOnly: true
           volumes:
             - name: data
               persistentVolumeClaim:
                 claimName: theatre-data
+            - name: step-ca-root
+              configMap:
+                name: step-ca-root-cert
