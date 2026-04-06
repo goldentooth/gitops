@@ -17,11 +17,21 @@ spec:
     spec:
       imagePullSecrets:
         - name: ghcr-pull-secret
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: goldentooth-theatre
           image: ghcr.io/goldentooth/theatre:11-7385858c67fd9517ad6baa0eff9ce1d80ba1dc5f # {"$imagepolicy": "flux-system:theatre"}
           imagePullPolicy: Always
           args: ["serve"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           env:
             - name: THEATRE_DATA_DIR
               value: "/data"
