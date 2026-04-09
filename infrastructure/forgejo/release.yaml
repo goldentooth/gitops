@@ -52,7 +52,8 @@ spec:
 
     persistence:
       enabled: true
-      existingClaim: forgejo-data
+      create: false
+      claimName: forgejo-data
 
     nodeSelector:
       node.kubernetes.io/disk-type: nvme
