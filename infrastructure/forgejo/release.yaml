@@ -1,7 +1,8 @@
 ---
 # Forgejo: self-hosted git forge mirroring GitHub repos, with Actions CI
 # for building Docker images on-cluster via Kaniko.
-# Runs on NVMe (Pi 5) nodes, SQLite for simplicity, SeaweedFS for persistence.
+# Runs on NVMe nodes, SQLite for simplicity, local-path for persistence.
+# NOTE: SQLite requires POSIX file locking — do NOT use SeaweedFS/network storage.
 apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
 metadata:
@@ -51,8 +52,7 @@ spec:
 
     persistence:
       enabled: true
-      storageClass: seaweedfs
-      size: 10Gi
+      existingClaim: forgejo-data
 
     nodeSelector:
       node.kubernetes.io/disk-type: nvme
