@@ -49,6 +49,9 @@ spec:
           DISABLE_REGISTRATION: true
         database:
           DB_TYPE: sqlite3
+        cron.update_mirrors:
+          SCHEDULE: "@every 5m"
+          NO_SUCCESS_NOTICE: true
 
     persistence:
       enabled: true
