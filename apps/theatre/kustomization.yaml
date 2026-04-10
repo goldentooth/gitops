@@ -7,7 +7,6 @@ resources:
   - pvc.yaml
   - deployment.yaml
   - service.yaml
-  - step-ca-root-cert.yaml
   - cronjob-git-sync.yaml
   - image-repository.yaml
   - image-policy.yaml
