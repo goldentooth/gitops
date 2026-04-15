@@ -36,7 +36,7 @@ spec:
               mountPath: /data
       containers:
         - name: goldentooth-theatre
-          image: ghcr.io/goldentooth/theatre:125-3b1d47dde3b38495dd650f5acb79ebaa0ac9557c # {"$imagepolicy": "flux-system:theatre"}
+          image: ghcr.io/goldentooth/theatre:126-b8d779a3f449159e4d8988b09bd446c9cf2f745b # {"$imagepolicy": "flux-system:theatre"}
           imagePullPolicy: Always
           args: ["serve"]
           securityContext:
