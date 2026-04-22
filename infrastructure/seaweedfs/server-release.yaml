@@ -14,7 +14,11 @@ spec:
   chart:
     spec:
       chart: seaweedfs
-      version: ">=4.17.0 <5.0.0"
+      # Pinned to 4.20.0 after 4.21.0 upgrade timed out repeatedly on Pi-5
+      # hardware (2026-04-19), leaving the HelmRelease Stalled and blocking
+      # the apps Kustomization. Revisit before unpinning: check 4.21.0+
+      # release notes and raise upgrade.timeout from 10m to 20m first.
+      version: "4.20.0"
       sourceRef:
         kind: HelmRepository
         name: seaweedfs
