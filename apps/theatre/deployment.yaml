@@ -68,6 +68,8 @@ spec:
               value: "1800"
             - name: THEATRE_READING_FEED_URL
               value: "https://darkdell.net/reading/feed.xml"
+            - name: LOKI_URL
+              value: "http://monitoring-loki.monitoring.svc:3100"
           ports:
             - name: mcp
               containerPort: 8080
