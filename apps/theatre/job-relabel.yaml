@@ -1,4 +1,3 @@
----
 # One-shot backfill: stamps the `bot` self-label on every character's
 # app.bsky.actor.profile record. Idempotent — `relabel` no-ops on accounts
 # that already carry the label. Reads config.toml from the baked-in /seed
@@ -24,7 +23,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: relabel
-          image: ghcr.io/goldentooth/theatre:329-b20ca183cc43a53d0ef15d83b0de209320f47552 # {"$imagepolicy": "flux-system:theatre"}
+          image: ghcr.io/goldentooth/theatre:332-5090d000c53044346e1b97a83e25367927477f0e # {"$imagepolicy": "flux-system:theatre"}
           imagePullPolicy: Always
           command: ["/bin/sh", "-c"]
           args:
