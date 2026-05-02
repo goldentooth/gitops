@@ -123,28 +123,20 @@ spec:
             forward_to = [loki.write.default.receiver]
 
             // Extract `level` from logfmt-formatted log lines (Prometheus
-            // stack, Tempo, Loki, controllers, most Go services).
+            // stack, Tempo, Loki, controllers, most Go services) and
+            // promote it to a stream label. Logs that aren't logfmt or
+            // don't have a `level` field get no label.
+            //
+            // We deliberately skip template-based normalization (lowercase /
+            // whitelist) because the alloy chart runs `tpl` on this whole
+            // config string, and Helm's template parser scans `{{...}}`
+            // unconditionally — there's no clean way to pass through Alloy's
+            // own template directives. Cardinality risk is small for this
+            // cluster's log volume; query with `(?i)` regex if needed.
             stage.logfmt {
               mapping = { "level" = "" }
             }
 
-            // Lowercase the extracted value so e.g. "INFO" and "info" merge.
-            // Backticks escape the {{...}} so Helm tpl doesn't consume the
-            // directive — Alloy's own template engine evaluates it.
-            stage.template {
-              source   = "level"
-              template = {{`"{{ ToLower .Value }}"`}}
-            }
-
-            // Whitelist to a known set of severity tokens. Anything else
-            // (including empty / not-extracted) yields empty string, which
-            // stage.labels skips. This caps cardinality.
-            stage.template {
-              source   = "level"
-              template = {{`"{{ if regexMatch \"^(critical|fatal|emerg|emergency|panic|error|warn|warning|info|notice|debug|trace)$\" .Value }}{{ .Value }}{{ end }}"`}}
-            }
-
-            // Promote `level` to a stream label.
             stage.labels {
               values = { "level" = "" }
             }
