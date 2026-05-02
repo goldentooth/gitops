@@ -129,9 +129,11 @@ spec:
             }
 
             // Lowercase the extracted value so e.g. "INFO" and "info" merge.
+            // Backticks escape the {{...}} so Helm tpl doesn't consume the
+            // directive — Alloy's own template engine evaluates it.
             stage.template {
               source   = "level"
-              template = "{{ ToLower .Value }}"
+              template = {{`"{{ ToLower .Value }}"`}}
             }
 
             // Whitelist to a known set of severity tokens. Anything else
@@ -139,7 +141,7 @@ spec:
             // stage.labels skips. This caps cardinality.
             stage.template {
               source   = "level"
-              template = "{{ if regexMatch \"^(critical|fatal|emerg|emergency|panic|error|warn|warning|info|notice|debug|trace)$\" .Value }}{{ .Value }}{{ end }}"
+              template = {{`"{{ if regexMatch \"^(critical|fatal|emerg|emergency|panic|error|warn|warning|info|notice|debug|trace)$\" .Value }}{{ .Value }}{{ end }}"`}}
             }
 
             // Promote `level` to a stream label.
