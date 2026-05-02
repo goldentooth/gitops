@@ -1,0 +1,77 @@
+---
+# One-shot backfill: stamps the `bot` self-label on every character's
+# app.bsky.actor.profile record. Idempotent — `relabel` no-ops on accounts
+# that already carry the label. Reads config.toml from the baked-in /seed
+# (no PVC mount needed) and the atproto secret from /data/secrets.
+#
+# Lifecycle: enable by adding to kustomization.yaml. After it runs to
+# completion, delete this file and remove the kustomization entry.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: theatre-relabel-bot
+  namespace: theatre
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 604800 # auto-delete after 7 days
+  template:
+    spec:
+      restartPolicy: OnFailure
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: relabel
+          image: ghcr.io/goldentooth/theatre:329-b20ca183cc43a53d0ef15d83b0de209320f47552 # {"$imagepolicy": "flux-system:theatre"}
+          imagePullPolicy: Always
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              failures=0
+              for d in /seed/characters/*/; do
+                name=$(basename "$d")
+                echo "=== relabel $name ==="
+                if ! /usr/local/bin/goldentooth-theatre relabel "$name"; then
+                  echo "  FAILED: $name"
+                  failures=$((failures + 1))
+                fi
+              done
+              if [ "$failures" -gt 0 ]; then
+                echo "$failures character(s) failed"
+                exit 1
+              fi
+              echo "all characters relabeled"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: THEATRE_DATA_DIR
+              value: "/seed"
+            - name: RUST_LOG
+              value: "info"
+          volumeMounts:
+            - name: secrets-files
+              mountPath: /data/secrets
+              readOnly: true
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+      volumes:
+        - name: secrets-files
+          secret:
+            secretName: theatre-secrets
+            items:
+              - key: atproto-passwords.json
+                path: atproto-passwords.json
