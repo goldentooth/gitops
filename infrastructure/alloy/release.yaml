@@ -122,6 +122,31 @@ spec:
           loki.process "pods" {
             forward_to = [loki.write.default.receiver]
 
+            // Extract `level` from logfmt-formatted log lines (Prometheus
+            // stack, Tempo, Loki, controllers, most Go services).
+            stage.logfmt {
+              mapping = { "level" = "" }
+            }
+
+            // Lowercase the extracted value so e.g. "INFO" and "info" merge.
+            stage.template {
+              source   = "level"
+              template = "{{ ToLower .Value }}"
+            }
+
+            // Whitelist to a known set of severity tokens. Anything else
+            // (including empty / not-extracted) yields empty string, which
+            // stage.labels skips. This caps cardinality.
+            stage.template {
+              source   = "level"
+              template = "{{ if regexMatch \"^(critical|fatal|emerg|emergency|panic|error|warn|warning|info|notice|debug|trace)$\" .Value }}{{ .Value }}{{ end }}"
+            }
+
+            // Promote `level` to a stream label.
+            stage.labels {
+              values = { "level" = "" }
+            }
+
             // Add static job label
             stage.static_labels {
               values = {
