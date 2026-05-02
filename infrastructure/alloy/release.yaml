@@ -127,12 +127,12 @@ spec:
             // promote it to a stream label. Logs that aren't logfmt or
             // don't have a `level` field get no label.
             //
-            // We deliberately skip template-based normalization (lowercase /
-            // whitelist) because the alloy chart runs `tpl` on this whole
-            // config string, and Helm's template parser scans `{{...}}`
-            // unconditionally — there's no clean way to pass through Alloy's
-            // own template directives. Cardinality risk is small for this
-            // cluster's log volume; query with `(?i)` regex if needed.
+            // No template-based normalization (lowercase / whitelist) is
+            // applied because the alloy chart pipes this whole config
+            // string through Helm tpl, which would consume any embedded
+            // template actions before Alloy ever sees them. Cardinality
+            // risk is small for this cluster; query with case-insensitive
+            // regex if mixed cases (INFO vs info) need merging.
             stage.logfmt {
               mapping = { "level" = "" }
             }
