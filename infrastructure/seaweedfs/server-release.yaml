@@ -3,6 +3,11 @@
 # Components: master (1), volume (4 on NVMe Pi 5 nodes), filer (1)
 # Data stored on NVMe drives mounted at /var/lib/longhorn on Pi 5 nodes
 # Replication "001" = 1 extra copy on another volume server
+#
+# Single-replica components (master, filer) are pinned by hostname so a
+# reschedule cannot land them on a different Pi-5 with empty hostPath
+# storage — that's how the docker-registry bucket got lost in 2026-04
+# during the 4.21.0 upgrade churn.
 apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
 metadata:
@@ -51,8 +56,11 @@ spec:
         hostPathPrefix: /var/lib/longhorn
       logs:
         type: "emptyDir"
+      # Pinned to payne — leveldb state on this node's hostPath. If payne
+      # is offline the master is unschedulable; that's the trade for
+      # protecting the data from a wrong-node reschedule.
       nodeSelector: |
-        node.kubernetes.io/disk-type: nvme
+        kubernetes.io/hostname: payne
       # Allow co-location with other SeaweedFS components on same node
       affinity: ""
       resources:
@@ -103,8 +111,11 @@ spec:
         hostPathPrefix: /var/lib/longhorn
       logs:
         type: "emptyDir"
+      # Pinned to norcross — leveldb bucket metadata lives on this node's
+      # hostPath. If norcross is offline the filer is unschedulable; that's
+      # the trade for protecting the data from a wrong-node reschedule.
       nodeSelector: |
-        node.kubernetes.io/disk-type: nvme
+        kubernetes.io/hostname: norcross
       # Allow co-location with master on same node
       affinity: ""
       s3:
