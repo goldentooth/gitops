@@ -5,6 +5,7 @@ resources:
   - namespace.yaml
   - certificate.yaml
   - registry-s3-secret.yaml
+  - seaweedfs-admin.secret.yaml
   - config.yaml
   - deployment.yaml
   - service.yaml

@@ -48,15 +48,19 @@ spec:
               drop:
                 - ALL
           env:
+            # Use SeaweedFS S3 admin creds, not the registry's own creds:
+            # the registry identity has Read/Write/List but not Admin, so
+            # CreateBucket returns AccessDenied. The admin secret is in
+            # this namespace specifically for bucket provisioning.
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
-                  name: registry-s3-secret
+                  name: seaweedfs-admin-creds
                   key: accesskey
             - name: AWS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: registry-s3-secret
+                  name: seaweedfs-admin-creds
                   key: secretkey
             - name: AWS_DEFAULT_REGION
               value: us-east-1
