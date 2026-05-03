@@ -1,0 +1,77 @@
+# Ensures the SeaweedFS S3 bucket backing the Docker registry exists.
+# Idempotent: head-bucket short-circuits if it's already there.
+#
+# Why: SeaweedFS S3 does not auto-create buckets, and the filer stores
+# bucket-directory metadata in a hostPath-backed leveldb. If the filer
+# pod is rescheduled to a different Pi-5 node (e.g. during a Helm
+# upgrade) the metadata vanishes and the registry crashloops with
+# NoSuchBucket. To re-run after a future loss: delete the completed Job
+# object and Flux reapplies. Blob data on volume servers becomes
+# orphaned; images need to be repushed.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: docker-registry-create-bucket
+  namespace: docker-registry
+spec:
+  backoffLimit: 5
+  ttlSecondsAfterFinished: 604800
+  template:
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: create-bucket
+          image: amazon/aws-cli:2.22.35
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              ENDPOINT=http://seaweedfs-seaweedfs-s3.seaweedfs.svc.cluster.local:8333
+              BUCKET=docker-registry
+              if aws s3api head-bucket --bucket "$BUCKET" --endpoint-url "$ENDPOINT" 2>/dev/null; then
+                echo "bucket $BUCKET already exists"
+                exit 0
+              fi
+              echo "creating bucket $BUCKET"
+              aws s3api create-bucket --bucket "$BUCKET" --endpoint-url "$ENDPOINT"
+              echo "bucket $BUCKET created"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: registry-s3-secret
+                  key: accesskey
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: registry-s3-secret
+                  key: secretkey
+            - name: AWS_DEFAULT_REGION
+              value: us-east-1
+            - name: HOME
+              value: /tmp
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+      volumes:
+        - name: tmp
+          emptyDir: {}
