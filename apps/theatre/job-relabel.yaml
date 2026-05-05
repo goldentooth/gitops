@@ -23,7 +23,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: relabel
-          image: ghcr.io/goldentooth/theatre:340-4b98df1f4d43dfce215dc9f1427ccb2d530cb311 # {"$imagepolicy": "flux-system:theatre"}
+          image: ghcr.io/goldentooth/theatre:341-8166aac547145bb1ab473a9a2e4f137e287d9a9f # {"$imagepolicy": "flux-system:theatre"}
           imagePullPolicy: Always
           command: ["/bin/sh", "-c"]
           args:
