@@ -47,11 +47,11 @@ data:
 
       - name: Grafana
         group: cluster
-        url: http://monitoring-kube-prometheus-stack-grafana.monitoring.svc.cluster.local:80/login
+        url: http://monitoring-kube-prometheus-stack-grafana.monitoring.svc.cluster.local:80/api/health
         interval: 2m
         conditions:
           - "[STATUS] == 200"
-          - "[RESPONSE_TIME] < 3000"
+          - "[BODY].database == ok"
         alerts:
           - type: ntfy
 
