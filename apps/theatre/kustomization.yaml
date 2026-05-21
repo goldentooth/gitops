@@ -5,6 +5,7 @@ resources:
   - namespace.yaml
   - secret.yaml
   - pvc.yaml
+  - rbac-flux-reader.yaml
   - deployment.yaml
   - service.yaml
   - cronjob-git-sync.yaml

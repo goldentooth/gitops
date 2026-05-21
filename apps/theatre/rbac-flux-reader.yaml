@@ -1,0 +1,25 @@
+---
+# Grants the theatre namespace's default service account cluster-wide read
+# access to Flux Kustomization resources, so the flux-stuck probe can
+# enumerate their status without needing kubectl in the image.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: theatre-flux-reader
+rules:
+  - apiGroups: ["kustomize.toolkit.fluxcd.io"]
+    resources: ["kustomizations"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: theatre-flux-reader
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: theatre
+roleRef:
+  kind: ClusterRole
+  name: theatre-flux-reader
+  apiGroup: rbac.authorization.k8s.io
