@@ -1,0 +1,45 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wiz6
+  namespace: wiz6
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wiz6
+  template:
+    metadata:
+      labels:
+        app: wiz6
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull
+      containers:
+        - name: viewer
+          image: ghcr.io/ndouglas/wiz6:sha-26e1c2b1e2bc4f500cc7cd3dada1da0ccfedcc32
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 50m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 1
+            periodSeconds: 5
