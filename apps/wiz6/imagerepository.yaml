@@ -7,3 +7,5 @@ metadata:
 spec:
   image: ghcr.io/ndouglas/wiz6
   interval: 5m
+  secretRef:
+    name: ghcr-pull
