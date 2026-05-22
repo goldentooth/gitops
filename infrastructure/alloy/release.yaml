@@ -264,6 +264,17 @@ spec:
       replicas: 2
 
     # ==================================================================
+    # METRICS SCRAPING
+    # The kube-prometheus-stack Prometheus selects ServiceMonitors by the
+    # `release=monitoring-kube-prometheus-stack` label, so we tag the
+    # generated SM with it to get picked up automatically.
+    # ==================================================================
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: monitoring-kube-prometheus-stack
+
+    # ==================================================================
     # RESOURCE LIMITS
     # Keep it light for Raspberry Pi (bumped slightly for OTel processing)
     # ==================================================================
