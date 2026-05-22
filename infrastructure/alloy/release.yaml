@@ -123,9 +123,18 @@ spec:
             forward_to = [loki.write.default.receiver]
 
             // Extract `level` from logfmt-formatted log lines (Prometheus
-            // stack, Tempo, Loki, controllers, most Go services) and
-            // promote it to a stream label. Logs that aren't logfmt or
-            // don't have a `level` field get no label.
+            // stack, Tempo, controllers, most Go services) and promote it
+            // to a stream label.
+            //
+            // The match selector gates logfmt parsing to lines that
+            // contain a literal `level=` token. Without this gate,
+            // stage.logfmt runs on every line in the cluster — JSON logs
+            // (Loki, k8s-sidecar), plain-text output, and stack traces
+            // all trip the parser, which emits an error-level log per
+            // failure. Those errors then loop back through this same
+            // pipeline and dominate the loki-errors probe's findings.
+            // The `level=` filter catches the logfmt apps and excludes
+            // JSON's `"level":"value"` syntax cleanly.
             //
             // No template-based normalization (lowercase / whitelist) is
             // applied because the alloy chart pipes this whole config
@@ -133,12 +142,16 @@ spec:
             // template actions before Alloy ever sees them. Cardinality
             // risk is small for this cluster; query with case-insensitive
             // regex if mixed cases (INFO vs info) need merging.
-            stage.logfmt {
-              mapping = { "level" = "" }
-            }
+            stage.match {
+              selector = "{namespace=~\".+\"} |~ \"level=\""
 
-            stage.labels {
-              values = { "level" = "" }
+              stage.logfmt {
+                mapping = { "level" = "" }
+              }
+
+              stage.labels {
+                values = { "level" = "" }
+              }
             }
 
             // Add static job label
