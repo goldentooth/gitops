@@ -8,10 +8,7 @@ spec:
   parentRefs:
     - name: goldentooth
       namespace: gateway
-      sectionName: https-public
-    - name: goldentooth
-      namespace: gateway
-      sectionName: https-pds-handles
+      sectionName: https
   hostnames:
     - pds.goldentooth.net
     - "*.pds.goldentooth.net"
