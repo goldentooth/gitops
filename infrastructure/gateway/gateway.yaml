@@ -58,3 +58,33 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
+
+    # HTTPS listener — public LE cert for goldentooth.net apex
+    - name: https-public-apex
+      protocol: HTTPS
+      port: 443
+      hostname: "goldentooth.net"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: gateway-tls-public
+            namespace: gateway
+      allowedRoutes:
+        namespaces:
+          from: All
+
+    # HTTPS listener — public LE cert for *.goldentooth.net subdomains
+    # (wiz6.goldentooth.net, etc.). More-specific wildcards above
+    # (*.pds.goldentooth.net) take precedence per Gateway API hostname matching.
+    - name: https-public-wildcard
+      protocol: HTTPS
+      port: 443
+      hostname: "*.goldentooth.net"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: gateway-tls-public
+            namespace: gateway
+      allowedRoutes:
+        namespaces:
+          from: All
