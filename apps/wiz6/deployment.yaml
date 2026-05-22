@@ -18,7 +18,7 @@ spec:
         - name: ghcr-pull
       containers:
         - name: viewer
-          image: ghcr.io/ndouglas/wiz6:sha-14099f535bccdd80236859c7f298f7ab7d29f5aa
+          image: ghcr.io/ndouglas/wiz6:sha-9441b624c88c27a5d463667729c26903241c86aa
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
