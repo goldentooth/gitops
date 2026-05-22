@@ -12,7 +12,6 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  targetNamespace: wiz6
   timeout: 3m0s
   wait: true
   decryption:
