@@ -1,0 +1,34 @@
+---
+# Watches ImagePolicies referenced via $imagepolicy markers in apps/wiz6/
+# and commits image-tag bumps back to the gitops repo.
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageUpdateAutomation
+metadata:
+  name: wiz6
+  namespace: flux-system
+spec:
+  interval: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        name: fluxcdbot
+        email: fluxcdbot@users.noreply.github.com
+      messageTemplate: |
+        chore(wiz6): auto-bump image
+
+        Files: {{ range $filename, $_ := .Updated.Files -}}{{ $filename }} {{ end }}
+        Images:
+        {{ range .Updated.Images -}}
+        - {{.}}
+        {{ end -}}
+    push:
+      branch: main
+  update:
+    path: ./apps/wiz6
+    strategy: Setters

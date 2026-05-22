@@ -7,3 +7,6 @@ resources:
   - service.yaml
   - httproute.yaml
   - secret.yaml
+  - imagerepository.yaml
+  - imagepolicy.yaml
+  - imageupdateautomation.yaml

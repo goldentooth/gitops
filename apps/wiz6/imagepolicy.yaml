@@ -1,0 +1,18 @@
+---
+# Selects the newest wiz6 build from ghcr.io.
+# Tag format produced by upstream CI: main-<short-sha>-<unix-ts>
+# Extract the timestamp and sort numerically; highest timestamp wins.
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: wiz6
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: wiz6
+  filterTags:
+    pattern: "^main-[a-f0-9]+-(?P<ts>[0-9]+)$"
+    extract: "$ts"
+  policy:
+    numerical:
+      order: asc
