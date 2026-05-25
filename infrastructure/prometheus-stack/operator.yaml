@@ -79,13 +79,15 @@ spec:
         retention: 7d
 
         # Resources for Prometheus pods
+        # Memory bumped from 2Gi after sustained OOMKills: 24h working-set peak
+        # was 1.93 GiB against the 2Gi limit, restart count climbed to 8.
         resources:
           limits:
             cpu: 1000m
-            memory: 2Gi  # Needs RAM for in-memory storage + processing
+            memory: 4Gi
           requests:
             cpu: 250m
-            memory: 1Gi
+            memory: 2Gi
 
         # Scrape interval: How often to collect metrics
         scrapeInterval: 30s
