@@ -11,4 +11,5 @@ resources:
   - ddns-rbac.yaml
   - ddns-secret.yaml
   - ddns-cronjob.yaml
+  - dns-sanity-cronjob.yaml
   - routes/

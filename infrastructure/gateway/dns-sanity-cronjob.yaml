@@ -1,0 +1,102 @@
+---
+# Guards against the public DNS regression where a public-facing record
+# (e.g. wiz6.goldentooth.net) gets published with a private/non-routable
+# address - exactly what external-dns did when it advertised the MetalLB
+# VIP. Queries PUBLIC resolvers directly (1.1.1.1 / 8.8.8.8), so it sees
+# the internet's view rather than any in-cluster override, and pings ntfy
+# when a name fails to resolve or resolves to a non-public IP.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: dns-sanity-checker
+  namespace: gateway
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: dns-sanity
+              image: alpine:3.20
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -u
+                  apk add --no-cache bind-tools curl >/dev/null
+
+                  # Returns 0 if the IPv4 address is publicly routable, 1 if
+                  # it is RFC1918 / loopback / link-local / CGNAT / unspecified.
+                  is_public() {
+                    IFS=. read -r a b c d <<EOF
+                  $1
+                  EOF
+                    case "$a" in
+                      0|10|127) return 1 ;;
+                      169) [ "$b" = "254" ] && return 1 ;;
+                      172) [ "$b" -ge 16 ] && [ "$b" -le 31 ] && return 1 ;;
+                      192) [ "$b" = "168" ] && return 1 ;;
+                      100) [ "$b" -ge 64 ] && [ "$b" -le 127 ] && return 1 ;;
+                    esac
+                    return 0
+                  }
+
+                  FAILURES=""
+                  for NAME in $NAMES; do
+                    ANSWERS=""
+                    for RESOLVER in $RESOLVERS; do
+                      ANSWERS=$(dig +short +time=3 +tries=2 "@${RESOLVER}" A "$NAME" \
+                        | grep -E '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' || true)
+                      [ -n "$ANSWERS" ] && break
+                    done
+
+                    if [ -z "$ANSWERS" ]; then
+                      echo "FAIL  $NAME -> no A record from public resolvers"
+                      FAILURES="${FAILURES}\n${NAME}: no public A record (NXDOMAIN or empty)"
+                      continue
+                    fi
+
+                    for IP in $ANSWERS; do
+                      if is_public "$IP"; then
+                        echo "OK    $NAME -> $IP"
+                      else
+                        echo "FAIL  $NAME -> $IP is NON-PUBLIC"
+                        FAILURES="${FAILURES}\n${NAME}: resolves to non-public ${IP}"
+                      fi
+                    done
+                  done
+
+                  if [ -n "$FAILURES" ]; then
+                    echo "DNS sanity check FAILED"
+                    printf 'Public DNS is advertising bad addresses:%b\n' "$FAILURES" \
+                      | curl -fsS -m 10 \
+                          -H "Title: DNS sanity check failed" \
+                          -H "Priority: high" \
+                          -H "Tags: rotating_light,dns" \
+                          -d @- \
+                          "${NTFY_URL}" >/dev/null \
+                      && echo "Alert sent to ntfy." \
+                      || echo "WARNING: failed to notify ntfy."
+                    exit 1
+                  fi
+
+                  echo "All public records resolve to public addresses."
+              env:
+                - name: NAMES
+                  value: "pds.goldentooth.net wiz6.goldentooth.net"
+                - name: RESOLVERS
+                  value: "1.1.1.1 8.8.8.8"
+                - name: NTFY_URL
+                  value: "http://ntfy.ntfy.svc.cluster.local/cluster-alerts"
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+                limits:
+                  cpu: 100m
+                  memory: 64Mi
