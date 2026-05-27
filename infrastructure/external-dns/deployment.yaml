@@ -31,6 +31,7 @@ spec:
             - --txt-owner-id=external-dns-external-dns
             - --log-level=debug
             - --exclude-domains=pds.goldentooth.net
+            - --exclude-domains=wiz6.goldentooth.net
           env:
             - name: AWS_DEFAULT_REGION
               value: us-east-1
