@@ -17,7 +17,7 @@ spec:
         - name: ghcr-pull
       containers:
         - name: viewer
-          image: ghcr.io/ndouglas/wiz6:main-d722a19-1780495593 # {"$imagepolicy": "flux-system:wiz6"}
+          image: ghcr.io/ndouglas/wiz6:main-1c04abc-1780496634 # {"$imagepolicy": "flux-system:wiz6"}
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
