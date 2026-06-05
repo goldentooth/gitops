@@ -46,13 +46,18 @@ spec:
       kind: ControllerConfiguration
       enableGatewayAPI: true
 
-    # Resource limits for the controller
+    # Resource limits for the controller.
+    # Controller memory scales with the number of Certificates/Secrets it
+    # caches in its informers (plus Gateway API watches). 128Mi was too tight
+    # and OOMKilled the controller in a tight crash loop (exit 137), which
+    # silently halted all renewals — the short-lived step-ca certs then expired
+    # within ~24h while the long-lived Let's Encrypt cert masked the outage.
     resources:
       requests:
         cpu: 10m
-        memory: 32Mi
-      limits:
         memory: 128Mi
+      limits:
+        memory: 512Mi
 
     # Webhook resource limits
     webhook:
