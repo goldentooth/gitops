@@ -17,6 +17,11 @@ spec:
   # Secret where the certificate will be stored
   secretName: canary-tls-secret
 
+  # Bound retained CertificateRequests. This canary renews HOURLY, so with the
+  # default (unbounded) retention it accumulated ~4500 CertificateRequests --
+  # the dominant driver of the cert-manager controller's startup-cache OOM.
+  revisionHistoryLimit: 3
+
   # Short certificate duration (2 hours) to force frequent renewals
   duration: 2h
 

@@ -9,6 +9,11 @@ spec:
   # Secret where Registry will read the certificate
   secretName: registry-tls
 
+  # Bound retained CertificateRequests. Unset means cert-manager keeps every
+  # revision forever; the backlog inflates the controller's startup cache and
+  # was a latent contributor to the OOM crash loop.
+  revisionHistoryLimit: 3
+
   # Certificate duration (24 hours)
   duration: 24h
 

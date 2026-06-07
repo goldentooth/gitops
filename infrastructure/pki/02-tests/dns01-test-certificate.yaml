@@ -11,6 +11,9 @@ metadata:
 spec:
   secretName: dns01-test-tls-secret
 
+  # Bound retained CertificateRequests (unset = unbounded retention).
+  revisionHistoryLimit: 3
+
   # Certificate duration (24 hours to match policy)
   duration: 24h
   renewBefore: 8h

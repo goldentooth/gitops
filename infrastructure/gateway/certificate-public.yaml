@@ -7,6 +7,9 @@ metadata:
   namespace: gateway
 spec:
   secretName: gateway-tls-public
+  # Bound retained CertificateRequests for consistency (this LE cert renews
+  # only ~every 60 days, so its backlog is small either way).
+  revisionHistoryLimit: 3
   issuerRef:
     name: letsencrypt
     kind: ClusterIssuer

@@ -15,6 +15,9 @@ spec:
   # Secret where the certificate will be stored
   secretName: test-tls-secret
 
+  # Bound retained CertificateRequests (unset = unbounded retention).
+  revisionHistoryLimit: 3
+
   # Certificate duration (24 hours to match our aggressive policy)
   duration: 24h
 

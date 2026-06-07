@@ -8,6 +8,9 @@ metadata:
   namespace: gateway
 spec:
   secretName: gateway-tls
+  # Bound retained CertificateRequests (unset = unbounded retention, which
+  # bloats the controller's startup cache).
+  revisionHistoryLimit: 3
   duration: 24h
   renewBefore: 8h
   issuerRef:
