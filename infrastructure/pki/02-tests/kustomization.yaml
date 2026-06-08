@@ -1,8 +1,14 @@
 ---
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+# NOTE: the ACME HTTP-01 test cert (acme-test-certificate) was retired.
+# HTTP-01 is environmentally fragile here: it depends on a freshly-created
+# per-challenge solver pod (~30s cold-start on the Pis) being reachable through
+# the shared Cilium gateway within the challenge window, AND on step-ca being
+# able to resolve the *.goldentooth.net name in-cluster — which is intermittent
+# because CoreDNS forwards goldentooth.net to public resolvers. DNS-01
+# (dns01-test-certificate) validates the ACME path reliably and is what we use.
 resources:
-  - acme-test-certificate.yaml
   - canary-certificate.yaml
   - dns01-test-certificate.yaml
   - test-certificate.yaml
