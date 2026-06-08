@@ -1,0 +1,80 @@
+---
+# Per-node DNS cache. A plain CoreDNS instance (image pinned to match the cluster
+# CoreDNS, v1.12.3) running on the POD network (hostNetwork: false is REQUIRED so
+# the CiliumLocalRedirectPolicy can redirect pod DNS traffic to the local pod).
+# Runs on every node (tolerates all taints, incl. control-plane).
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-local-dns
+  namespace: kube-system
+  labels:
+    k8s-app: node-local-dns
+spec:
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      k8s-app: node-local-dns
+  template:
+    metadata:
+      labels:
+        k8s-app: node-local-dns
+    spec:
+      serviceAccountName: node-local-dns
+      priorityClassName: system-node-critical
+      dnsPolicy: Default  # don't use cluster DNS for the cache's own resolution
+      hostNetwork: false
+      tolerations:
+        - operator: Exists  # run on every node, including tainted control-plane/GPU
+      containers:
+        - name: node-cache
+          image: registry.k8s.io/coredns/coredns:v1.12.3
+          args: ["-conf", "/etc/coredns/Corefile"]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 30Mi
+            limits:
+              memory: 128Mi
+          ports:
+            - name: dns
+              containerPort: 53
+              protocol: UDP
+            - name: dns-tcp
+              containerPort: 53
+              protocol: TCP
+            - name: metrics
+              containerPort: 9253
+              protocol: TCP
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+              add: ["NET_BIND_SERVICE"]  # bind :53
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: config
+              mountPath: /etc/coredns
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: node-local-dns
+            items:
+              - key: Corefile
+                path: Corefile

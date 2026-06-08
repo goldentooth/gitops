@@ -1,0 +1,33 @@
+---
+# Transparently redirect pod DNS (traffic to the kube-dns Service / 10.96.0.10)
+# to the node-local cache pod ON THE SAME NODE. Requires Cilium with
+# enable-local-redirect-policy=true (already set) and kubeProxyReplacement.
+#
+# Fallback safety: if a node has no ready node-local-dns backend (e.g. mid-rollout
+# or pod crash), Cilium does NOT redirect and traffic follows the normal kube-dns
+# Service to the central CoreDNS — so DNS keeps working. This is what makes the
+# rollout safe to stage.
+#
+# Port NAMES (dns, dns-tcp) must match BOTH the kube-dns Service port names and
+# the node-local-dns pod containerPort names.
+apiVersion: cilium.io/v2
+kind: CiliumLocalRedirectPolicy
+metadata:
+  name: node-local-dns
+  namespace: kube-system
+spec:
+  redirectFrontend:
+    serviceMatcher:
+      serviceName: kube-dns
+      namespace: kube-system
+  redirectBackend:
+    localEndpointSelector:
+      matchLabels:
+        k8s-app: node-local-dns
+    toPorts:
+      - port: "53"
+        protocol: UDP
+        name: dns
+      - port: "53"
+        protocol: TCP
+        name: dns-tcp

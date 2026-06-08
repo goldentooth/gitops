@@ -1,0 +1,28 @@
+---
+# Non-intercepted path from the node-local cache to the REAL cluster CoreDNS.
+# Same backends as kube-dns (selector k8s-app=kube-dns), but a DISTINCT ClusterIP
+# (10.96.0.11) that the LocalRedirectPolicy does not match — so cache misses
+# forwarded here reach the central CoreDNS pods instead of looping back to the
+# local cache. Static ClusterIP so the cache Corefile can reference it directly
+# (the cache cannot resolve names — it *is* the resolver).
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-dns-upstream
+  namespace: kube-system
+  labels:
+    k8s-app: kube-dns
+    kubernetes.io/name: KubeDNSUpstream
+spec:
+  clusterIP: 10.96.0.11
+  selector:
+    k8s-app: kube-dns
+  ports:
+    - name: dns
+      port: 53
+      protocol: UDP
+      targetPort: 53
+    - name: dns-tcp
+      port: 53
+      protocol: TCP
+      targetPort: 53

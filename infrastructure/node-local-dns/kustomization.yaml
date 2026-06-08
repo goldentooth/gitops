@@ -1,0 +1,15 @@
+---
+# Per-node DNS cache (NodeLocal DNSCache, Cilium LocalRedirectPolicy variant).
+# Fronts the central CoreDNS with an on-node cache to cut cross-node UDP DNS,
+# absorb the ndots:5 NXDOMAIN amplification (cached denials), and relieve the
+# upstream-forward overload that was causing intermittent resolution failures
+# under load. See ../../docs is intentionally avoided; rationale is inline here
+# and in each manifest.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - serviceaccount.yaml
+  - configmap.yaml
+  - service-upstream.yaml
+  - daemonset.yaml
+  - local-redirect-policy.yaml

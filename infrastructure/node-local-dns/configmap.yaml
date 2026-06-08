@@ -1,0 +1,44 @@
+---
+# Corefile for the per-node DNS cache (a plain CoreDNS instance, one per node).
+# It is intentionally dumb: cache everything and forward all misses to the REAL
+# cluster CoreDNS via the kube-dns-upstream Service (10.96.0.11), which is NOT
+# intercepted by the LocalRedirectPolicy (only kube-dns / 10.96.0.10 is). So the
+# real CoreDNS stays the single owner of policy (goldentooth.net -> LAN resolver,
+# external -> public) and there is no redirect loop. force_tcp on the cache->CoreDNS
+# hop avoids the UDP/conntrack race that was dropping queries under load.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: node-local-dns
+  namespace: kube-system
+  labels:
+    k8s-app: node-local-dns
+data:
+  Corefile: |
+    cluster.local:53 {
+        errors
+        health 0.0.0.0:8080
+        ready
+        cache {
+            success 9984 30
+            denial 9984 5
+        }
+        reload
+        loop
+        bind 0.0.0.0
+        forward . 10.96.0.11 {
+            force_tcp
+        }
+        prometheus :9253
+    }
+    .:53 {
+        errors
+        cache 30
+        reload
+        loop
+        bind 0.0.0.0
+        forward . 10.96.0.11 {
+            force_tcp
+        }
+        prometheus :9253
+    }
