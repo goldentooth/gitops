@@ -1,0 +1,12 @@
+---
+# Self-managed CoreDNS (migrated off Talos's built-in; cluster.coreDNS.disabled:
+# true in cluster/talconfig.yaml). Replicates the Talos-bootstrapped objects so
+# Flux adopts them in place. See clog 115.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - serviceaccount.yaml
+  - clusterrole.yaml
+  - configmap.yaml
+  - deployment.yaml
+  - service.yaml

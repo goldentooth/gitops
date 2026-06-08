@@ -1,0 +1,39 @@
+---
+# Corefile. The only deviation from a stock cluster Corefile is the dedicated
+# `forward goldentooth.net 192.168.1.1` (the LAN/UniFi resolver) ahead of the
+# public catch-all: *.goldentooth.net records point at internal IPs and resolving
+# them via public 8.8.8.8/1.1.1.1 was unreliable under load. See clog 115.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns
+  namespace: kube-system
+data:
+  Corefile: |
+    .:53 {
+        errors
+        health {
+            lameduck 5s
+        }
+        ready
+        log . {
+            class error
+        }
+        prometheus :9153
+        kubernetes cluster.local in-addr.arpa ip6.arpa {
+            pods insecure
+            fallthrough in-addr.arpa ip6.arpa
+            ttl 30
+        }
+        forward goldentooth.net 192.168.1.1
+        forward . 8.8.8.8 1.1.1.1 {
+           max_concurrent 1000
+        }
+        cache 30 {
+           disable success cluster.local
+           disable denial cluster.local
+        }
+        loop
+        reload
+        loadbalance
+    }
