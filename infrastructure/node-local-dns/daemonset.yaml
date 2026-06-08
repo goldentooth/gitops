@@ -64,7 +64,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /ready
-              port: 8080
+              port: 8181   # the `ready` plugin's port (health is 8080)
             initialDelaySeconds: 5
             periodSeconds: 5
           volumeMounts:
