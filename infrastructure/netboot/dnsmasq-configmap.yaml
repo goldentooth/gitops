@@ -1,21 +1,14 @@
 ---
-# dnsmasq configuration for Raspberry Pi network boot — TFTP-ONLY.
+# dnsmasq configuration for Raspberry Pi network boot.
 #
-# As of the 2026-06 HA rework this runs as a plain TFTP server behind the
-# floating 10.4.11.30 VIP (see dnsmasq-deployment.yaml + dnsmasq-service.yaml).
+# Runs in proxy DHCP mode: responds to PXE boot requests from Pis
+# with TFTP server info, without conflicting with the existing UniFi
+# DHCP server. The Pi EEPROM uses its serial number (last 8 hex chars)
+# as the TFTP subdirectory, so each Pi downloads its own boot files.
 #
-# PROXY-DHCP REMOVED: the old config also answered PXE via proxy-DHCP, which
-# needs broadcast + hostNetwork and therefore can't sit behind a VIP (the thing
-# that gives us HA). The PXE boot options now come from the always-on UniFi DHCP
-# server instead — this is the fallback the previous comment already described.
-#
-# REQUIRED UniFi DHCP config for the 10.4.0.0/20 network (see HA-MIGRATION.md):
-#   - Network boot: ENABLED
-#   - TFTP / next-server: 10.4.11.30
-#   - Boot filename: pxelinux.0   (the GRUB EFI binary, for Pi 4 EDK2 UEFI PXE)
-# Pi VideoCore EEPROM netboot ignores DHCP boot options entirely — it uses its
-# (reflashed) EEPROM TFTP_IP=10.4.11.30 + serial-number subdir — so it needs only
-# a lease + TFTP at the 10.4.11.30 VIP.
+# If proxy DHCP doesn't work with Pi firmware (some EEPROM versions
+# are picky), set next-server=10.4.0.30 in UniFi DHCP options instead
+# and remove the dhcp-range/proxy lines below.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -23,16 +16,28 @@ metadata:
   namespace: netboot
 data:
   dnsmasq.conf: |
-    # Not a DNS server and not a DHCP server — TFTP only.
+    # Don't run as DNS server, just DHCP/TFTP
     port=0
 
-    # Built-in TFTP server (served on the 10.4.11.30 VIP, UDP/69).
+    # Proxy DHCP mode: add PXE options to DHCP responses from the
+    # main DHCP server without issuing leases ourselves.
+    # The 255.255.240.0 mask matches the 10.4.0.0/20 infra subnet.
+    dhcp-range=10.4.0.0,proxy,255.255.240.0
+
+    # Boot filename for PXE clients. The Pi VideoCore bootloader ignores
+    # this (it uses its EEPROM TFTP_IP and serial-number subdirectory),
+    # but EDK2 UEFI PXE uses it to download the network bootloader.
+    # pxelinux.0 is our GRUB EFI binary, which loads grub.cfg from TFTP.
+    dhcp-boot=pxelinux.0,,10.4.0.30
+    pxe-service=0,"Raspberry Pi Boot"
+
+    # Log DHCP transactions (useful for debugging boot issues)
+    log-dhcp
+
+    # Built-in TFTP server
     enable-tftp
     tftp-root=/var/lib/tftpboot
 
-    # Log TFTP transactions (useful for debugging boot issues).
-    log-debug
-
-    # Don't resolve anything, we're not a DNS server.
+    # Don't resolve anything, we're not a DNS server
     no-resolv
     no-hosts

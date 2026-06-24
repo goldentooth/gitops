@@ -29,7 +29,7 @@ spec:
     spec:
       # --- Change this to target a different node ---
       nodeSelector:
-        kubernetes.io/hostname: __TARGET_NODE__
+        kubernetes.io/hostname: dalt
       restartPolicy: Never
       hostPID: true
       containers:
@@ -44,9 +44,9 @@ spec:
             #   0xf41 = SD(1) -> USB(4) -> retry(f)  <- factory default
             - name: BOOT_ORDER
               value: "0xf21"
-            # TFTP server VIP (netboot anchor; see HA-MIGRATION.md)
+            # TFTP server IP (Velaryon)
             - name: TFTP_IP
-              value: "10.4.11.30"
+              value: "10.4.0.30"
             # Boot partition device on Pi 4B
             - name: BOOT_DEV
               value: "/dev/mmcblk0p1"
