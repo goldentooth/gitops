@@ -1,0 +1,34 @@
+---
+# dnsmasq TFTP VIP — the floating 10.4.0.30 the Pi EEPROMs are hardcoded to
+# (TFTP_IP=10.4.0.30). MetalLB L2 announces it from a node that currently runs a
+# dnsmasq pod and fails it over on node death — this is what makes netboot
+# survive losing velaryon.
+#
+# externalTrafficPolicy: Local is REQUIRED here:
+#   - It makes MetalLB announce the VIP only from a node with a ready dnsmasq
+#     endpoint, and skips SNAT, so TFTP's ephemeral-port data replies reach the
+#     client correctly (the reason the old setup used hostNetwork).
+#
+# Shares the 10.4.0.30 IP with matchbox-service (port 8080) via MetalLB's
+# allow-shared-ip — both must carry the same annotation value.
+apiVersion: v1
+kind: Service
+metadata:
+  name: dnsmasq-tftp
+  namespace: netboot
+  labels:
+    app: dnsmasq
+  annotations:
+    metallb.universe.tf/allow-shared-ip: "netboot-anchor"
+    metallb.universe.tf/loadBalancerIPs: "10.4.0.30"
+spec:
+  type: LoadBalancer
+  loadBalancerIP: 10.4.0.30        # kept for older MetalLB; the annotation is authoritative
+  externalTrafficPolicy: Local
+  selector:
+    app: dnsmasq
+  ports:
+    - port: 69
+      targetPort: 69
+      protocol: UDP
+      name: tftp
