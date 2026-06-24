@@ -1,10 +1,14 @@
 ---
-# Matchbox LoadBalancer service. Uses a fixed MetalLB IP so the
-# talos.config= URL in cmdline.txt can reference a stable address
-# reachable by Pis before they join the cluster.
+# Matchbox LoadBalancer service.
 #
-# Phase 2: uncomment the talos.config line in cmdline.txt and point
-# it at this service's IP to enable auto-provisioning.
+# Pinned to the netboot anchor 10.4.11.30:8080 — the address the generated Talos
+# cmdline targets (talos.config=http://10.4.11.30:8080/generic, see
+# setup-boot-assets-script.yaml). 10.4.11.30 is a free MetalLB-pool IP shared with
+# dnsmasq-tftp (UDP/69) via allow-shared-ip; the annotation value MUST match
+# dnsmasq-service.yaml.
+#
+# (Was 10.4.0.30, velaryon's host IP, served via hostNetwork — the SPOF this
+# rework removes. The old matchbox-service IP 10.4.11.50 was unused.)
 apiVersion: v1
 kind: Service
 metadata:
@@ -12,11 +16,12 @@ metadata:
   namespace: netboot
   labels:
     app: matchbox
+  annotations:
+    metallb.universe.tf/allow-shared-ip: "netboot-anchor"
+    metallb.universe.tf/loadBalancerIPs: "10.4.11.30"
 spec:
   type: LoadBalancer
-  # Pick a free IP from the MetalLB pool (10.4.11.0-10.4.15.254).
-  # Change this if it conflicts with an existing allocation.
-  loadBalancerIP: 10.4.11.50
+  loadBalancerIP: 10.4.11.30        # kept for older MetalLB; the annotation is authoritative
   selector:
     app: matchbox
   ports:

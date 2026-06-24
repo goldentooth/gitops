@@ -7,7 +7,8 @@ resources:
   - dnsmasq-configmap.yaml
   - setup-boot-assets-script.yaml
   - grub-arm64-efi-configmap.yaml
-  - dnsmasq-daemonset.yaml
+  - dnsmasq-deployment.yaml
+  - dnsmasq-service.yaml
   - matchbox-groups.yaml
   - matchbox-profiles.yaml
   - matchbox-deployment.yaml

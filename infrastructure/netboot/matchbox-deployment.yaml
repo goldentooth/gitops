@@ -23,10 +23,16 @@ metadata:
   labels:
     app: matchbox
 spec:
-  replicas: 1
+  # HA (2026-06 outage): was replicas:1 + hostNetwork + nodeSelector=velaryon —
+  # a single point of failure that died with velaryon. Now 2 replicas spread
+  # across the disk-booting nodes, reached via the floating 10.4.11.30:8080 VIP
+  # (matchbox-service.yaml) that the Talos cmdline already targets.
+  replicas: 2
   strategy:
-    type: Recreate
-    rollingUpdate: null
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: matchbox
@@ -35,8 +41,23 @@ spec:
       labels:
         app: matchbox
     spec:
-      nodeSelector:
-        kubernetes.io/hostname: velaryon
+      # Same disk-booting-nodes constraint + spread as dnsmasq (see that file's
+      # rationale). matchbox is plain HTTP behind a Service VIP, so it does NOT
+      # need hostNetwork.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values: ["velaryon", "manderly", "norcross", "payne"]
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: matchbox
+              topologyKey: kubernetes.io/hostname
       tolerations:
         - key: gpu
           operator: Equal
@@ -46,8 +67,6 @@ spec:
           operator: Equal
           value: "x86"
           effect: NoSchedule
-      hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
       containers:
         - name: matchbox
           image: quay.io/poseidon/matchbox:v0.11.0
