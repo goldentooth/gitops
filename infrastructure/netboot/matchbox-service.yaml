@@ -21,7 +21,6 @@ metadata:
     metallb.universe.tf/loadBalancerIPs: "10.4.11.30"
 spec:
   type: LoadBalancer
-  loadBalancerIP: 10.4.11.30        # kept for older MetalLB; the annotation is authoritative
   selector:
     app: matchbox
   ports:
