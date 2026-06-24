@@ -1,119 +1,119 @@
-# Netboot HA migration (dnsmasq + matchbox)
+# Netboot HA migration (dnsmasq + matchbox) — Option A
 
-**Why:** the 2026-06 outage. `dnsmasq` and `matchbox` were single instances
-`hostNetwork`-pinned to **velaryon**. When velaryon went down it took the whole
-bramble's netboot (DHCP-PXE + TFTP + Talos config) with it, so every Talos node
-that rebooted got stuck at PXE (link up, no OS — "steady amber") and **could not
-be recovered by power-cycling** — a circular dependency (nodes need netboot to
-boot; netboot lived on one node).
+**Why:** the 2026-06 outage. `dnsmasq` (TFTP) and `matchbox` (Talos config) were
+single instances `hostNetwork`-pinned to **velaryon**, served at velaryon's host
+IP **10.4.0.30**. When velaryon died, all netboot died with it, every Talos Pi
+that rebooted got stuck at PXE ("steady amber"), and power-cycling couldn't fix
+it (circular dependency: nodes need netboot to boot; netboot lived on one node).
 
-**What changed (this branch):**
+**The fix:** make the netboot services HA behind a **floating MetalLB VIP**, run
+them only on disk-booting nodes (so netboot never again depends on a node that
+itself netboots), and move the PXE boot *options* to the always-on UniFi DHCP.
 
-| | Before | After |
-|---|---|---|
-| dnsmasq | DaemonSet, `hostNetwork`, pinned to velaryon, proxy-DHCP + TFTP | Deployment, 2 replicas, anti-affinity across **disk-booting** nodes, **TFTP-only**, behind a floating VIP |
-| matchbox | Deployment, 1 replica, `hostNetwork`, pinned to velaryon | Deployment, 2 replicas, anti-affinity, behind a floating VIP |
-| 10.4.0.30 | velaryon's host IP (dies with the node) | **MetalLB L2 VIP**, shared by both Services, fails over on node death |
-| PXE boot options | dnsmasq proxy-DHCP (broadcast → needs hostNetwork → can't be HA) | **UniFi DHCP** (always-on) |
+**Anchor IP change (the crux):** `10.4.0.30` is velaryon's host IP and is outside
+the MetalLB pool, so it can't be floated. We move the anchor to **`10.4.11.30`**
+(a free IP inside the MetalLB pool `10.4.11.0–10.4.15.254`) and **reflash every
+Pi EEPROM's `TFTP_IP` 10.4.0.30 → 10.4.11.30** (Option A). `TFTP_IP` is set
+statically in EEPROM; a *future* anchor move would need another reflash.
 
-`10.4.0.30` is immutable: the Pi EEPROMs hardcode `TFTP_IP=10.4.0.30`
-(`eeprom-update*.yaml`) and the Talos cmdline targets `http://10.4.0.30:8080`
-(`setup-boot-assets-script.yaml`). We keep that IP but make it float.
+What this branch changes: `dnsmasq` DaemonSet→Deployment (2 replicas, anti-affinity
+across velaryon/manderly/norcross/payne, TFTP-only) behind `dnsmasq-tftp` VIP;
+`matchbox` 1→2 replicas, no hostNetwork, behind its VIP (corrected to 10.4.11.30);
+both VIPs share 10.4.11.30 via MetalLB `allow-shared-ip`; proxy-DHCP removed from
+dnsmasq (→ UniFi); EEPROM jobs + boot cmdline retargeted to 10.4.11.30.
 
-Netboot now only ever runs on nodes that boot from local disk
-(velaryon + the Ubuntu workers manderly/norcross/payne), so it never again
-depends on a node that itself needs netboot.
+## Fleet (from node-inventory.yaml) — 16 Pis to reflash
 
----
+- **Pi 4B (BCM2711), Talos** → `eeprom-update-job.yaml`: allyrion, bettley,
+  cargyll, dalt, erenford, fenn, gardener, harlton, inchfield, jast, karstark, lipps
+- **Pi 5 (BCM2712)** → `eeprom-update-pi5-job.yaml`: manderly, norcross, payne, oakheart
 
-## REQUIRED manual step — UniFi DHCP (do this FIRST)
-
-Removing in-cluster proxy-DHCP means the **PXE boot options must come from UniFi**
-for Pi 4 (EDK2 UEFI) nodes. On the UniFi controller, for the `10.4.0.0/20`
-network:
-
-- Network boot / PXE: **enabled**
-- **TFTP server / next-server: `10.4.0.30`**
-- **Boot filename: `pxelinux.0`**
-
-(Pi 5 / VideoCore EEPROM netboot ignores DHCP boot options — it uses its
-hardcoded `TFTP_IP=10.4.0.30` + serial subdir — so it only needs a lease + TFTP
-at 10.4.0.30, which still hold. So if your fleet is Pi 5-only you can technically
-skip the boot-filename, but set it anyway for the EDK2 path.)
-
-> ⚠️ **Ordering matters.** If you `flux`-apply this branch *before* setting the
-> UniFi options, Pi 4 EDK2 nodes lose their PXE boot options (no proxy-DHCP, no
-> UniFi next-server yet) and won't netboot. **Set UniFi first, verify a node can
-> still PXE, then merge.** Don't do this while the cluster is still in the
-> degraded state from the outage — finish recovery first.
+velaryon (x86) has no Pi EEPROM. Driver: `./reflash-fleet.sh` (`list` / `<node>` / `all`).
 
 ---
 
-## Rollout order
+## Prerequisites
 
-1. **Recover the cluster first** (velaryon back, nodes Ready) — do NOT migrate
-   netboot mid-outage.
-2. Set the **UniFi DHCP options** above. Verify the MetalLB pool includes
-   `10.4.0.30` (it must be allocatable as an L2 VIP on the 10.4.0.0/20 segment;
-   if your MetalLB pool is only 10.4.11.0–10.4.15.254, add a pool/range covering
-   10.4.0.30 or move the anchor IP — see "Open question" below).
-3. Merge this branch → flux reconciles `infrastructure/netboot`.
-4. Validate (below).
-5. Test a real reboot of one Talos node and confirm it netboots.
-6. **Failover test:** cordon/`drain` (or power off) whichever node currently
-   announces `10.4.0.30`, confirm the VIP + a dnsmasq/matchbox replica move to
-   another disk-booting node and a node can still netboot.
+- **Cluster fully recovered** on the CURRENT (old, 10.4.0.30/velaryon) setup —
+  all 16 Pis Ready. Do NOT migrate mid-outage; a node must be UP to reflash it.
+- `10.4.11.30` is free: `kubectl get svc -A -o wide | grep 10.4.11.30` → empty.
+- MetalLB has an L2Advertisement covering the pool (it already serves 10.4.11.x).
+- `kubectl` context = the cluster; `talosctl` configured for the Pi 4B nodes.
 
-## Validation
+## Rollout (phased — ordering is safety-critical)
 
+### Phase 0 — prep, no disruption
+Confirm prerequisites. Leave the old setup running.
+
+### Phase 1 — cut over the in-cluster services (maintenance window)
+Merge this branch → flux applies the final state: old velaryon daemonset removed,
+the `10.4.11.30` VIP + HA pods come up. **Running nodes keep running** (they only
+re-read netboot on reboot), so this is low-impact, but from here until a node is
+reflashed it must NOT reboot (its EEPROM still points at the now-gone 10.4.0.30).
+
+Validate the VIP before touching any Pi:
 ```bash
-kubectl -n netboot get deploy,pods -o wide        # 2 dnsmasq + 2 matchbox, on ≥2 distinct disk-booting nodes
-kubectl -n netboot get svc                          # dnsmasq-tftp + matchbox both EXTERNAL-IP 10.4.0.30
-# TFTP reachable on the VIP:
-tftp 10.4.0.30 -c get pxelinux.0 /tmp/x && ls -l /tmp/x
-# matchbox reachable on the VIP:
-curl -s http://10.4.0.30:8080/ -o /dev/null -w '%{http_code}\n'
+kubectl -n netboot get deploy,pods -o wide        # 2 dnsmasq + 2 matchbox on ≥2 disk-booting nodes
+kubectl -n netboot get svc                          # dnsmasq-tftp + matchbox both EXTERNAL-IP 10.4.11.30
+tftp 10.4.11.30 -c get pxelinux.0 /tmp/x && ls -l /tmp/x
+curl -s -o /dev/null -w '%{http_code}\n' http://10.4.11.30:8080/
+```
+**Rollback if the VIP is broken:** `git revert` the merge → old 10.4.0.30 setup
+returns. No node has rebooted, so nothing is stranded.
+
+> ⚠️ Window risk: while migrating, an *un-reflashed* node that reboots for any
+> reason can't netboot (EEPROM still says 10.4.0.30, which is gone). Mitigation:
+> do the fleet promptly and don't reboot nodes except the one you're reflashing.
+> If you want zero window risk, keep velaryon's old hostNetwork dnsmasq running in
+> parallel until Phase 3 (run the new stack under temporary `-ha` labels to avoid
+> the `app: dnsmasq` selector collision) — more fiddly; usually not worth it here.
+
+### Phase 2 — canary reflash
+Pick one non-control-plane Pi 4B (e.g. `lipps`):
+```bash
+./reflash-fleet.sh lipps          # stages the EEPROM update Job, waits, prints reboot cmd
+talosctl -n 10.4.0.21 reboot      # flashes EEPROM on boot
+kubectl get node lipps -w         # must come back Ready — proves it netbooted via 10.4.11.30
+```
+If it fails: the old 10.4.0.30 path is gone, so recover by re-staging with
+`TFTP_IP=10.4.0.30` (revert Phase 1) — hence validate the VIP in Phase 1 first.
+
+### Phase 3 — fleet reflash
+```bash
+./reflash-fleet.sh all            # walks every node; pauses for you to reboot+verify each
+```
+One node at a time. **Do control-plane nodes individually, waiting for Ready
+between**, to preserve etcd quorum. Never reboot an un-reflashed node.
+
+### Phase 4 — finish + UniFi
+- Set UniFi DHCP boot options for `10.4.0.0/20`: **next-server `10.4.11.30`**,
+  **boot filename `pxelinux.0`** (covers the Pi 4B EDK2/GRUB chain now that
+  in-cluster proxy-DHCP is gone). Pi 5 / VideoCore uses its reflashed EEPROM
+  `TFTP_IP` directly and ignores DHCP boot options.
+- Verify a full reboot of a node netboots cleanly via the VIP.
+- **Failover test:** drain/poweroff whichever node currently announces 10.4.11.30
+  (`kubectl -n netboot get svc dnsmasq-tftp -o wide` → check the node), confirm the
+  VIP + a dnsmasq/matchbox replica move to another disk-booting node and a node can
+  still netboot. This is the whole point — confirm it works.
+
+## Validation summary
+```bash
+kubectl -n netboot get deploy,svc,pods -o wide
+tftp 10.4.11.30 -c get pxelinux.0 /tmp/x && echo TFTP-OK
+curl -s -o /dev/null -w 'matchbox %{http_code}\n' http://10.4.11.30:8080/
+kubectl get nodes        # all 16 Ready
 ```
 
 ## Rollback
+- **Before any reflash:** `git revert` the merge → old velaryon 10.4.0.30 setup.
+- **After reflashing some nodes:** they now expect 10.4.11.30. To fully roll back
+  you'd re-stage those nodes with `TFTP_IP=10.4.0.30` and revert the merge. Easier
+  to roll *forward* — finish the fleet.
 
-`git revert` the merge (restores the velaryon-pinned DaemonSet/Deployment) and
-remove the UniFi next-server/filename options. Because `10.4.0.30` is unchanged
-in both states, rollback doesn't require touching the Pi EEPROMs.
-
----
-
-## ⚠️ BLOCKER to resolve before merge — the anchor IP (10.4.0.30)
-
-Confirmed from the repo: the MetalLB pool (`apps/metallb.yaml`) is
-**`10.4.11.0–10.4.15.254`**. **`10.4.0.30` is NOT in it** — it's on the node
-subnet and is currently **velaryon's own static host IP** (that's how the old
-hostNetwork setup served it). You cannot float a node's host IP as a MetalLB VIP:
-when velaryon is up it would conflict with the VIP. So the Service manifests in
-this draft (loadBalancerIP 10.4.0.30) **won't get an address as-is** — pick one
-of these first:
-
-**Option A — move the anchor into the MetalLB pool (cleanest; one-time EEPROM
-reflash).** Choose a free pool IP (e.g. `10.4.11.30`) and update everything that
-hardcodes the anchor:
-  - `dnsmasq-service.yaml` + `matchbox-service.yaml` loadBalancerIP/annotation
-  - `setup-boot-assets-script.yaml` cmdline `talos.config=http://<ip>:8080`
-  - `eeprom-update-job.yaml` + `eeprom-update-pi5-job.yaml` `TFTP_IP`
-  - UniFi `next-server`
-  Then re-run the eeprom-update jobs on every Pi (reflashes `TFTP_IP`). Permanent,
-  fully in-pool VIP HA. Cost: an EEPROM reflash pass (do it once, cluster healthy).
-
-**Option B — keep 10.4.0.30, carve it out as a dedicated single-IP MetalLB pool
-+ free it from velaryon.** Add an `IPAddressPool` for `10.4.0.30/32`
-(+ L2Advertisement) and change **velaryon's static host IP** (Talos machine
-config) to something else so the VIP can own `10.4.0.30`. No EEPROM reflash, but
-you must edit velaryon's node config and ensure 10.4.0.30 is reserved/excluded in
-UniFi DHCP. Confirm 10.4.0.30 isn't otherwise in a DHCP range.
-
-I drafted the Services pinned to `10.4.0.30` (Option B shape) since it avoids
-touching EEPROMs, but **Option A is the more robust long-term answer.** Tell me
-which and I'll finalize the manifests (+ the MetalLB pool resource).
-
-- **`allow-shared-ip`.** Both Services share the anchor IP via
-  `metallb.universe.tf/allow-shared-ip: netboot-anchor` (different ports/protocols
-  → allowed). Verify your MetalLB version honors the annotation (v0.13+).
+## Notes / tech-debt
+- The EEPROM jobs pull `rpi-eeprom@master` from GitHub at run time — pin a ref for
+  reproducibility before a future re-run.
+- `reflash-fleet.sh` stages only; reboots are manual (one node at a time, watched).
+- Longer term, the disk-booting-node constraint is expressed via explicit hostname
+  affinity; a `goldentooth.io/netboot-server` node label (set in Talos/Ansible) is
+  the cleaner selector.

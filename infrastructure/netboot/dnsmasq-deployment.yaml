@@ -8,17 +8,18 @@
 # dead node into a cascading, un-recoverable-by-power-cycle outage.
 #
 # HA MODEL:
-#   - The Pi EEPROMs hardcode TFTP_IP=10.4.0.30 (see eeprom-update*.yaml) and
-#     the Talos cmdline points matchbox at 10.4.0.30:8080. 10.4.0.30 is the
-#     immutable netboot anchor, so we keep it but float it via a MetalLB L2
-#     VIP (dnsmasq-service.yaml) instead of pinning it to velaryon's host IP.
+#   - The netboot anchor moved from 10.4.0.30 (velaryon's host IP, un-floatable)
+#     to 10.4.11.30, a free MetalLB-pool IP that floats as an L2 VIP
+#     (dnsmasq-service.yaml). The Pi EEPROMs are reflashed to TFTP_IP=10.4.11.30
+#     and the Talos cmdline points matchbox at 10.4.11.30:8080 (eeprom-update*.yaml,
+#     setup-boot-assets-script.yaml). See HA-MIGRATION.md.
 #   - 2 replicas spread (podAntiAffinity) across the DISK-BOOTING nodes only
 #     (velaryon + the Ubuntu workers manderly/norcross/payne). Those nodes boot
 #     from local disk and do NOT depend on netboot themselves — breaking the
 #     circular dependency that made this unrecoverable. Never host netboot on a
 #     node that itself netboots.
 #   - The Service uses externalTrafficPolicy: Local, so MetalLB announces
-#     10.4.0.30 only from a node that actually has a dnsmasq pod, and traffic is
+#     10.4.11.30 only from a node that actually has a dnsmasq pod, and traffic is
 #     NOT SNAT'd — TFTP (whose data replies come from an ephemeral port) works
 #     correctly, the same as the old hostNetwork setup. On node death the VIP
 #     fails over to the other replica's node.
@@ -26,7 +27,7 @@
 # PROXY-DHCP MOVED OFF-CLUSTER: the old config also ran dnsmasq as a proxy-DHCP
 # responder (broadcast, which needs hostNetwork and can't sit behind a VIP). The
 # PXE boot options (next-server + filename) now come from the always-on UniFi
-# DHCP server instead — see dnsmasq-configmap.yaml + MIGRATION.md. This container
+# DHCP server instead — see dnsmasq-configmap.yaml + HA-MIGRATION.md. This container
 # is now TFTP-only.
 apiVersion: apps/v1
 kind: Deployment
@@ -53,7 +54,7 @@ spec:
       # Schedule ONLY on disk-booting nodes (they don't depend on netboot to
       # boot). Explicit hostnames for now; a `goldentooth.io/netboot-server`
       # node label set in the Talos/Ansible node config is the cleaner long-term
-      # selector (see MIGRATION.md).
+      # selector (see HA-MIGRATION.md).
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

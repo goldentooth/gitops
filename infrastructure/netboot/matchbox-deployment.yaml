@@ -25,7 +25,7 @@ metadata:
 spec:
   # HA (2026-06 outage): was replicas:1 + hostNetwork + nodeSelector=velaryon —
   # a single point of failure that died with velaryon. Now 2 replicas spread
-  # across the disk-booting nodes, reached via the floating 10.4.0.30:8080 VIP
+  # across the disk-booting nodes, reached via the floating 10.4.11.30:8080 VIP
   # (matchbox-service.yaml) that the Talos cmdline already targets.
   replicas: 2
   strategy:

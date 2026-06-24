@@ -1,15 +1,14 @@
 ---
 # Matchbox LoadBalancer service.
 #
-# Pinned to the netboot anchor 10.4.0.30:8080 — the address the generated Talos
-# cmdline ALREADY targets (talos.config=http://10.4.0.30:8080/generic, see
-# setup-boot-assets-script.yaml). The old 10.4.11.50 here was unused: matchbox
-# was actually reached via velaryon's host IP (10.4.0.30) because the Deployment
-# ran hostNetwork on velaryon. Now that the Deployment is HA + non-hostNetwork,
-# this Service is the real path, so it must carry 10.4.0.30.
+# Pinned to the netboot anchor 10.4.11.30:8080 — the address the generated Talos
+# cmdline targets (talos.config=http://10.4.11.30:8080/generic, see
+# setup-boot-assets-script.yaml). 10.4.11.30 is a free MetalLB-pool IP shared with
+# dnsmasq-tftp (UDP/69) via allow-shared-ip; the annotation value MUST match
+# dnsmasq-service.yaml.
 #
-# Shares 10.4.0.30 with dnsmasq-tftp (UDP/69) via MetalLB allow-shared-ip — the
-# annotation value MUST match dnsmasq-service.yaml.
+# (Was 10.4.0.30, velaryon's host IP, served via hostNetwork — the SPOF this
+# rework removes. The old matchbox-service IP 10.4.11.50 was unused.)
 apiVersion: v1
 kind: Service
 metadata:
@@ -19,10 +18,10 @@ metadata:
     app: matchbox
   annotations:
     metallb.universe.tf/allow-shared-ip: "netboot-anchor"
-    metallb.universe.tf/loadBalancerIPs: "10.4.0.30"
+    metallb.universe.tf/loadBalancerIPs: "10.4.11.30"
 spec:
   type: LoadBalancer
-  loadBalancerIP: 10.4.0.30        # kept for older MetalLB; the annotation is authoritative
+  loadBalancerIP: 10.4.11.30        # kept for older MetalLB; the annotation is authoritative
   selector:
     app: matchbox
   ports:

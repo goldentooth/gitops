@@ -37,7 +37,7 @@ spec:
     spec:
       # --- Change this to target a specific Pi 5 node ---
       nodeSelector:
-        kubernetes.io/hostname: oakheart
+        kubernetes.io/hostname: __TARGET_NODE__
       restartPolicy: Never
       hostPID: true
       containers:
@@ -49,9 +49,9 @@ spec:
             # BOOT_ORDER: SD first, network fallback, retry
             - name: BOOT_ORDER
               value: "0xf21"
-            # TFTP server IP (Velaryon)
+            # TFTP server VIP (netboot anchor; see HA-MIGRATION.md)
             - name: TFTP_IP
-              value: "10.4.0.30"
+              value: "10.4.11.30"
             # Boot partition device on Pi 5 (SD card)
             - name: BOOT_DEV
               value: "/dev/mmcblk0p1"
