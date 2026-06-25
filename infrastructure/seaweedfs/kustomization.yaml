@@ -8,5 +8,6 @@ resources:
   - csi-repository.yaml
   - csi-release.yaml
   - s3-credentials.secret.yaml
+  - meta-backup-credentials.secret.yaml
   - meta-backup-configmap.yaml
   - meta-backup-cronjob.yaml

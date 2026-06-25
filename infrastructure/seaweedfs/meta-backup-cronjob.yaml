@@ -6,13 +6,10 @@
 # ships it off-cluster to S3. Reduces the documented data-loss risk (2026-04 lost the
 # docker-registry bucket) WITHOUT the risky filer-store HA migration.
 #
-# REQUIRES (one-time, by hand — gitops uses SOPS): a secret `seaweedfs-backup-credentials`
-# in the seaweedfs namespace with AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY that can write
-# the bucket below. Simplest: reuse the pds backup creds —
-#   kubectl -n pds get secret pds-backup-credentials -o json \
-#     | jq '{apiVersion,kind,type,data:{AWS_ACCESS_KEY_ID:.data.AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY:.data.AWS_SECRET_ACCESS_KEY},metadata:{name:"seaweedfs-backup-credentials",namespace:"seaweedfs"}}' \
-#     | kubectl apply -f -
-# (or add it SOPS-encrypted to gitops for a clean record).
+# Credentials: meta-backup-credentials.secret.yaml (SOPS-encrypted in this kustomization)
+# — AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY for IAM user goldentooth-pds-backup, the same
+# key pds-backup-credentials uses. Rotate by minting a new key for that user and updating
+# both secrets.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
