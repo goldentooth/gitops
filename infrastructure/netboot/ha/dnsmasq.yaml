@@ -107,9 +107,12 @@ spec:
               cpu: 50m
               memory: 64Mi
           readinessProbe:
+            # dnsmasq runs on every node (bind-dynamic) but only binds :69 on the node that
+            # holds the VIP. So readiness = the process is up — NOT that :69 is bound, which
+            # would leave the non-holder pods perpetually unready and fail flux health checks.
             exec:
-              command: ["/bin/sh", "-c", "netstat -lun 2>/dev/null | grep -q ':69 '"]
-            initialDelaySeconds: 5
+              command: ["/bin/sh", "-c", "pidof dnsmasq >/dev/null"]
+            initialDelaySeconds: 10
             periodSeconds: 10
       volumes:
         - name: dnsmasq-config
