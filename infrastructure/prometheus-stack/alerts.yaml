@@ -132,3 +132,44 @@ spec:
           annotations:
             summary: "Loki storage is filling up"
             description: "Loki PVC is {{ $value | humanize }}% full."
+
+    # -----------------------------------------------------------------
+    # Backup health
+    # The off-site (AWS S3) backups are the cluster's only disaster copy.
+    # They failed silently for weeks (dead IAM key) before being caught by
+    # hand — these alerts make the next failure surface immediately.
+    # Staleness (no successful run in the expected window) is the primary
+    # signal; a failed individual job is the faster, finer-grained one.
+    # -----------------------------------------------------------------
+    - name: backup-health
+      rules:
+        - alert: BackupJobFailed
+          # max by (…) collapses the per-`reason` series (BackoffLimitExceeded,
+          # DeadlineExceeded, …) so one failed run = one alert, not three.
+          expr: max by (namespace, job_name) (kube_job_status_failed{namespace=~"pds|seaweedfs", job_name=~"pds-backup-.*|seaweedfs-meta-backup-.*"}) > 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Backup job {{ $labels.namespace }}/{{ $labels.job_name }} failed"
+            description: "A backup CronJob run has failed pods. Off-site backup integrity at risk — check `kubectl -n {{ $labels.namespace }} logs job/{{ $labels.job_name }}`."
+
+        - alert: PdsBackupStale
+          # Hourly CronJob; alert if no successful run in 3h (several missed runs).
+          expr: (time() - kube_cronjob_status_last_successful_time{namespace="pds", cronjob="pds-backup"}) > 3 * 3600
+          for: 30m
+          labels:
+            severity: critical
+          annotations:
+            summary: "PDS backup has not succeeded in over 3 hours"
+            description: "pds-backup last succeeded {{ $value | humanizeDuration }} ago (runs hourly). The off-site PDS backup may be silently broken."
+
+        - alert: SeaweedfsMetaBackupStale
+          # Daily CronJob (04:00); alert if no successful run in 30h.
+          expr: (time() - kube_cronjob_status_last_successful_time{namespace="seaweedfs", cronjob="seaweedfs-meta-backup"}) > 30 * 3600
+          for: 1h
+          labels:
+            severity: critical
+          annotations:
+            summary: "SeaweedFS filer-metadata backup has not succeeded in over 30 hours"
+            description: "seaweedfs-meta-backup last succeeded {{ $value | humanizeDuration }} ago (runs daily). The off-site filer-metadata backup may be silently broken."
