@@ -7,7 +7,9 @@ metadata:
   name: cluster-alerts
   namespace: monitoring
   labels:
-    release: kube-prometheus-stack
+    # Must match the Prometheus ruleSelector (spec.ruleSelector.matchLabels.release
+    # = monitoring-kube-prometheus-stack) or the rules are silently never loaded.
+    release: monitoring-kube-prometheus-stack
 spec:
   groups:
     # -----------------------------------------------------------------

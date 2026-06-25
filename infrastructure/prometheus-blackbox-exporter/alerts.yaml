@@ -7,8 +7,9 @@ metadata:
   name: blackbox-exporter-alerts
   namespace: monitoring
   labels:
-    # This label ensures Prometheus Operator picks up the rule
-    release: kube-prometheus-stack
+    # Must match the Prometheus ruleSelector (release=monitoring-kube-prometheus-stack)
+    # or the rule is silently never loaded.
+    release: monitoring-kube-prometheus-stack
 spec:
   groups:
     - name: blackbox-exporter
