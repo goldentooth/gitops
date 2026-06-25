@@ -262,6 +262,15 @@ spec:
     controller:
       type: deployment
       replicas: 2
+      # Spread the 2 replicas across distinct nodes so a single node loss can't take
+      # both (resilience Tier 2). Safe: 2 replicas, 17 nodes.
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: alloy
+              topologyKey: kubernetes.io/hostname
 
     # ==================================================================
     # METRICS SCRAPING

@@ -88,3 +88,17 @@ spec:
       ports:
         nats:
           enabled: true
+
+    # Spread the 3 JetStream replicas across distinct nodes so a single node loss can't
+    # take more than one (resilience Tier 2). The nats chart injects arbitrary pod-spec
+    # via podTemplate.merge. Safe: 3 replicas, 17 nodes. Pairs with the existing PDB.
+    podTemplate:
+      merge:
+        spec:
+          affinity:
+            podAntiAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: nats
+                  topologyKey: kubernetes.io/hostname
