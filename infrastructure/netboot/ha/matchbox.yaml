@@ -1,0 +1,69 @@
+---
+# PRODUCTION HA netboot — matchbox (HTTP Talos-config server), co-located on the VIP nodes.
+# REVIEW ONLY (ha/ not in ../kustomization.yaml). See ha/README.md.
+#
+# hostNetwork DaemonSet on the same Pi5 workers, binding 0.0.0.0:8080. Each node's matchbox
+# answers on its own IP, and the kube-vip leader additionally answers on 10.4.0.8:8080 — the
+# address grub.cfg's `talos.config=http://10.4.0.8:8080/...` targets. matchbox is stateless
+# (serves groups/profiles from ConfigMaps + machine configs from a Secret), so running a copy
+# per node is fine; only the VIP-holder is actually reached by booting Pis.
+#
+# (Replaces the velaryon-pinned matchbox Deployment + its 10.4.11.50 Service at cutover.)
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: matchbox-ha
+  namespace: netboot
+  labels:
+    app: matchbox-ha
+spec:
+  selector:
+    matchLabels:
+      app: matchbox-ha
+  template:
+    metadata:
+      labels:
+        app: matchbox-ha
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values: ["manderly", "norcross", "payne"]
+      containers:
+        - name: matchbox
+          image: quay.io/poseidon/matchbox:v0.11.0
+          args:
+            - -address=0.0.0.0:8080
+            - -assets-path=
+            - -log-level=debug
+          volumeMounts:
+            - { name: groups, mountPath: /var/lib/matchbox/groups }
+            - { name: profiles, mountPath: /var/lib/matchbox/profiles }
+            - { name: machine-configs, mountPath: /var/lib/matchbox/generic, readOnly: true }
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: groups
+          configMap:
+            name: matchbox-groups
+        - name: profiles
+          configMap:
+            name: matchbox-profiles
+        - name: machine-configs
+          secret:
+            secretName: talos-machine-configs
+            optional: true
