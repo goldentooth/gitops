@@ -46,7 +46,7 @@ spec:
               value: "0xf21"
             # TFTP server IP (Velaryon)
             - name: TFTP_IP
-              value: "10.4.0.30"
+              value: "10.4.0.8"
             # Boot partition device on Pi 4B
             - name: BOOT_DEV
               value: "/dev/mmcblk0p1"
