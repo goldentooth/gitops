@@ -30,11 +30,12 @@ time; a Pi whose reflash fails still boots via the live `10.4.0.30`.
 2. **VIP + TFTP.** Apply `kube-vip.yaml` + `dnsmasq.yaml`. Verify (same as the canary):
    `kubectl -n netboot get lease netboot-vip`; `tftp 10.4.0.8 -c get pxelinux.0 /tmp/x`;
    kill the leader → VIP + TFTP fail over. velaryon's `10.4.0.30` is untouched throughout.
-3. **UniFi DHCP** (for the Pi4 EDK2 stage-2, since we run no in-cluster proxy-DHCP): set
-   `next-server = 10.4.0.8`, boot filename `pxelinux.0`. Non-disruptive (Pi VideoCore uses
-   its EEPROM `TFTP_IP`; only EDK2 reads next-server). When set, **disable velaryon's
-   proxy-DHCP** (`dnsmasq-configmap.yaml` — drop the `dhcp-range/dhcp-boot/pxe-service` lines)
-   so there's a single boot-pointer source.
+3. **UniFi DHCP — TEMPORARY bootstrap** (for the Pi4 EDK2 stage-2). `next-server = 10.4.0.8`,
+   boot filename `pxelinux.0` (already set 2026-06-25). Non-disruptive (Pi VideoCore uses its
+   EEPROM `TFTP_IP`; only EDK2 reads next-server). When set, **disable velaryon's proxy-DHCP**
+   (`dnsmasq-configmap.yaml` — drop the `dhcp-range/dhcp-boot/pxe-service` lines) so there's a
+   single boot-pointer source. This manual UniFi setting is replaced by in-cluster proxy-DHCP
+   in step 7 (the IaC end-state).
 4. **Reflash target = `10.4.0.8`.** In `../eeprom-update-job.yaml` + `../eeprom-update-pi5-job.yaml`
    set `TFTP_IP=10.4.0.8`. Canary one worker: `../reflash-fleet.sh lipps`, `talosctl reboot`,
    confirm it netboots via `10.4.0.8` and rejoins (fallback: re-stage with `10.4.0.30`).
@@ -43,11 +44,19 @@ time; a Pi whose reflash fails still boots via the live `10.4.0.30`.
 6. **Retire `10.4.0.30`.** Once all 16 are on `10.4.0.8`: remove the velaryon-pinned
    `dnsmasq-daemonset.yaml`, `matchbox-deployment.yaml`, `matchbox-service.yaml` from
    `../kustomization.yaml` and add `ha/*`. Done — single SPOF gone.
+7. **IaC boot pointer (replace the UniFi `next-server`).** Uncomment the proxy-DHCP block in
+   `dnsmasq.yaml`, then **remove** the UniFi `next-server` (only one source may answer).
+   Validate by rebooting one **Pi4** through EDK2 — if it netboots, the boot pointer is now
+   fully in gitops; delete the UniFi setting for good. If the Pi4 firmware is picky about the
+   3-responder DaemonSet, fall back to a **single-replica** proxy-DHCP responder (replicas:1
+   Deployment with the same 3 directives). Pi5 + all VideoCore stages are unaffected (EEPROM
+   `TFTP_IP`). Roll back trivially by re-commenting + restoring the UniFi setting.
 
 ## Open decisions for review
-1. **proxy-DHCP → UniFi.** This drops in-cluster proxy-DHCP entirely (would be 3 responders
-   on the new stack) in favor of UniFi `next-server`. Confirm UniFi can set next-server +
-   filename for `10.4.0.0/20`. (Alternative: keep proxy-DHCP but pin it to one node — messier.)
+1. **proxy-DHCP responder shape (step 7).** Default is proxy-DHCP on the dnsmasq DaemonSet
+   (3 responders) — simplest, HA, but unproven vs these Pi4 EEPROMs. Real test = a Pi4 EDK2
+   reboot. Fallback if picky = single-replica responder (IaC, slower failover, only consulted
+   at EDK2 boot). UniFi `next-server` is the working bootstrap until this is proven.
 2. **Reflash the Pi5 server nodes too?** manderly/norcross/payne/oakheart boot Ubuntu from
    disk; their `TFTP_IP` is only a fallback. Recommend reflashing them too for consistency.
 3. **matchbox `:8080` on the Pi5 hosts** — confirm host port 8080 is free on manderly/

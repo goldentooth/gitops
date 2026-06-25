@@ -2,10 +2,14 @@
 # PRODUCTION HA netboot — dnsmasq TFTP, hostNetwork, bound to the floating VIP 10.4.0.8.
 # REVIEW ONLY (ha/ not in ../kustomization.yaml). See ha/README.md.
 #
-# TFTP-only + bind-dynamic: the VIP-holder (kube-vip leader) answers TFTP FROM 10.4.0.8
-# (no NAT → works; validated). No proxy-DHCP here on purpose — running it on 3 nodes would
-# be 3 PXE responders. The Pi VideoCore stage uses its EEPROM TFTP_IP=10.4.0.8 directly;
-# the Pi4 EDK2 stage-2 boot pointer comes from UniFi DHCP next-server=10.4.0.8 (see README).
+# TFTP + bind-dynamic: the VIP-holder (kube-vip leader) answers TFTP FROM 10.4.0.8 (no NAT
+# → works; validated). The Pi VideoCore stage uses its EEPROM TFTP_IP=10.4.0.8 directly.
+#
+# Boot pointer for the Pi4 EDK2 stage-2 (chainloads GRUB): two ways, ONE at a time —
+#   - bootstrap: UniFi DHCP next-server=10.4.0.8 (manual, in use now), OR
+#   - IaC end-state: in-cluster PROXY-DHCP (the commented block below). Enabling it puts the
+#     boot pointer in gitops and lets us delete the UniFi setting. See README step 7.
+# Only Pi4 EDK2 needs this; Pi5 + all VideoCore stages use the EEPROM TFTP_IP directly.
 #
 # Reuses the existing boot-asset ConfigMaps. NOTE: setup-boot-assets-script bakes the matchbox
 # URL into grub.cfg — it must be http://10.4.0.8:8080 (a one-line change to that script,
@@ -18,7 +22,7 @@ metadata:
   namespace: netboot
 data:
   dnsmasq.conf: |
-    # Not a DNS or DHCP server — TFTP only.
+    # No DNS server (port=0). TFTP always; proxy-DHCP optional (see below).
     port=0
     enable-tftp
     tftp-root=/var/lib/tftpboot
@@ -29,6 +33,22 @@ data:
     log-debug
     no-resolv
     no-hosts
+
+    # --- IaC boot pointer (proxy-DHCP) — DISABLED until the cutover (README step 7) ---
+    # Uncomment to move the Pi4 EDK2 boot pointer from UniFi next-server into gitops, then
+    # REMOVE the UniFi next-server (only one source may answer). Proxy-DHCP issues NO leases
+    # (UniFi still owns DHCP) — it only adds the PXE boot-server + filename.
+    #
+    # CAVEAT — multi-responder: DHCP is broadcast, so this may be answered by all 3 dnsmasq
+    # pods (listen-address binds TFTP to the VIP, but DHCP broadcast reception is per-iface).
+    # Multiple proxy-DHCP offers are usually fine, but Pi EEPROM firmware can be picky.
+    # VALIDATE by rebooting one Pi4 through EDK2 with UniFi next-server removed. If picky,
+    # FALLBACK to a single-replica proxy-DHCP responder (a replicas:1 Deployment with these
+    # same 3 lines + dhcp-boot pointing at 10.4.0.8) instead of this DaemonSet.
+    #
+    # dhcp-range=10.4.0.0,proxy,255.255.240.0
+    # dhcp-boot=pxelinux.0,,10.4.0.8
+    # pxe-service=0,"Raspberry Pi Boot"
 ---
 apiVersion: apps/v1
 kind: DaemonSet
