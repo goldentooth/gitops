@@ -18,6 +18,9 @@ data:
     env_auth = false
     access_key_id = RCLONE_AWS_ACCESS_KEY
     secret_access_key = RCLONE_AWS_SECRET_KEY
+    # Bucket already exists; the IAM policy is least-privilege (no s3:CreateBucket).
+    # Stop rclone from probing/creating the bucket on every upload.
+    no_check_bucket = true
   backup.sh: |
     #!/bin/sh
     set -e

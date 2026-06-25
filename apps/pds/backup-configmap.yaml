@@ -14,6 +14,7 @@ data:
     access_key_id = RCLONE_SEAWEEDFS_ACCESS_KEY
     secret_access_key = RCLONE_SEAWEEDFS_SECRET_KEY
     force_path_style = true
+    no_check_bucket = true
 
     [aws]
     type = s3
@@ -22,6 +23,8 @@ data:
     env_auth = false
     access_key_id = RCLONE_AWS_ACCESS_KEY
     secret_access_key = RCLONE_AWS_SECRET_KEY
+    # Bucket already exists; IAM policy is least-privilege (no s3:CreateBucket).
+    no_check_bucket = true
   backup.sh: |
     #!/bin/sh
     set -e
