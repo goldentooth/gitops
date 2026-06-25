@@ -4,18 +4,12 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - node-inventory.yaml
-  - dnsmasq-configmap.yaml
   - setup-boot-assets-script.yaml
   - grub-arm64-efi-configmap.yaml
   - matchbox-groups.yaml
   - matchbox-profiles.yaml
-  # --- HA netboot stack @ 10.4.0.8 (kube-vip + dnsmasq + matchbox on the disk-booting
-  #     Pi5 workers). Validated; see ha/README.md + IP-ALLOCATION.md. ---
+  # HA netboot stack @ 10.4.0.8 (kube-vip + dnsmasq + matchbox on the disk-booting Pi5
+  # workers). Sole netboot path now. See ha/README.md + IP-ALLOCATION.md.
   - ha/kube-vip.yaml
   - ha/dnsmasq.yaml
   - ha/matchbox.yaml
-  # --- legacy velaryon-pinned netboot (10.4.0.30) — retired in the next step once the
-  #     HA stack is confirmed serving. Kept briefly for overlap. ---
-  - dnsmasq-daemonset.yaml
-  - matchbox-deployment.yaml
-  - matchbox-service.yaml
