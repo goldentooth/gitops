@@ -1,0 +1,41 @@
+---
+# rclone config + script for the SeaweedFS filer-metadata backup.
+# The filer's embedded leveldb (/var/lib/longhorn/filer_store on norcross) IS the
+# filesystem index for every PVC in the cluster. This ships a daily crash-consistent
+# snapshot to AWS S3 (OFF-cluster — backing filer metadata up to SeaweedFS itself would
+# be circular). Restores the 2026-04-class data-loss safety net.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: seaweedfs-meta-backup-config
+  namespace: seaweedfs
+data:
+  rclone.conf: |
+    [aws]
+    type = s3
+    provider = AWS
+    region = us-east-1
+    env_auth = false
+    access_key_id = RCLONE_AWS_ACCESS_KEY
+    secret_access_key = RCLONE_AWS_SECRET_KEY
+  backup.sh: |
+    #!/bin/sh
+    set -e
+    TS=$(date -u +%Y%m%d-%H%M%S)
+    SNAP=/staging/filer-store.tar.gz
+    if [ ! -s "$SNAP" ]; then echo "ERROR: snapshot $SNAP missing/empty (init container failed)"; exit 1; fi
+    echo "SeaweedFS filer-metadata backup $TS — snapshot $(ls -lh $SNAP | awk '{print $5}')"
+
+    sed -e "s|RCLONE_AWS_ACCESS_KEY|$AWS_ACCESS_KEY_ID|" \
+        -e "s|RCLONE_AWS_SECRET_KEY|$AWS_SECRET_ACCESS_KEY|" \
+        /etc/backup/rclone.conf > /tmp/rclone.conf
+
+    DEST="aws:${BACKUP_BUCKET}/${BACKUP_PREFIX}/filer-store-${TS}.tar.gz"
+    echo "Uploading to ${DEST}"
+    rclone copyto "$SNAP" "$DEST" --config /tmp/rclone.conf
+
+    # Retention: keep ~30 daily snapshots.
+    rclone delete "aws:${BACKUP_BUCKET}/${BACKUP_PREFIX}/" --min-age 30d --config /tmp/rclone.conf || true
+
+    rm -f /tmp/rclone.conf
+    echo "Backup complete: filer-store-${TS}.tar.gz"

@@ -1,0 +1,91 @@
+---
+# Daily backup of the SeaweedFS filer metadata (embedded leveldb) to AWS S3.
+#
+# Pinned to norcross (where the filer leveldb hostPath lives). An init container tars the
+# live leveldb (crash-consistent — leveldb recovers from a point-in-time copy), then rclone
+# ships it off-cluster to S3. Reduces the documented data-loss risk (2026-04 lost the
+# docker-registry bucket) WITHOUT the risky filer-store HA migration.
+#
+# REQUIRES (one-time, by hand — gitops uses SOPS): a secret `seaweedfs-backup-credentials`
+# in the seaweedfs namespace with AWS_ACCESS_KEY_ID + AWS_SECRET_ACCESS_KEY that can write
+# the bucket below. Simplest: reuse the pds backup creds —
+#   kubectl -n pds get secret pds-backup-credentials -o json \
+#     | jq '{apiVersion,kind,type,data:{AWS_ACCESS_KEY_ID:.data.AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY:.data.AWS_SECRET_ACCESS_KEY},metadata:{name:"seaweedfs-backup-credentials",namespace:"seaweedfs"}}' \
+#     | kubectl apply -f -
+# (or add it SOPS-encrypted to gitops for a clean record).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: seaweedfs-meta-backup
+  namespace: seaweedfs
+  labels:
+    app: seaweedfs-meta-backup
+spec:
+  schedule: "0 4 * * *"
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: seaweedfs-meta-backup
+        spec:
+          restartPolicy: OnFailure
+          # The filer leveldb hostPath lives on norcross (filer is pinned there).
+          nodeSelector:
+            kubernetes.io/hostname: norcross
+          initContainers:
+            # Crash-consistent snapshot of the live leveldb into the staging emptyDir.
+            - name: snapshot
+              image: alpine:3.21
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  set -e
+                  if [ ! -d /filer_store/. ]; then echo "ERROR: /filer_store empty — filer not on this node?"; exit 1; fi
+                  tar czf /staging/filer-store.tar.gz -C /filer_store .
+                  ls -lh /staging/filer-store.tar.gz
+              volumeMounts:
+                - name: filer-store
+                  mountPath: /filer_store
+                  readOnly: true
+                - name: staging
+                  mountPath: /staging
+          containers:
+            - name: backup
+              image: rclone/rclone:1.68
+              command: ["/bin/sh", "/etc/backup/backup.sh"]
+              env:
+                - { name: BACKUP_BUCKET, value: "goldentooth-pds-backup" }
+                - { name: BACKUP_PREFIX, value: "seaweedfs-meta" }
+              envFrom:
+                - secretRef:
+                    name: seaweedfs-backup-credentials
+              volumeMounts:
+                - name: config
+                  mountPath: /etc/backup
+                  readOnly: true
+                - name: staging
+                  mountPath: /staging
+                  readOnly: true
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 256Mi
+          volumes:
+            - name: filer-store
+              hostPath:
+                path: /var/lib/longhorn/filer_store
+                type: Directory
+            - name: config
+              configMap:
+                name: seaweedfs-meta-backup-config
+                defaultMode: 0755
+            - name: staging
+              emptyDir: {}
