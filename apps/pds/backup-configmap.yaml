@@ -34,10 +34,12 @@ data:
     # SQLite snapshots already created by init container in /tmp/backup/
 
     # Substitute secrets into rclone config
-    sed -e "s/RCLONE_SEAWEEDFS_ACCESS_KEY/$SEAWEEDFS_ACCESS_KEY/" \
-        -e "s/RCLONE_SEAWEEDFS_SECRET_KEY/$SEAWEEDFS_SECRET_KEY/" \
-        -e "s/RCLONE_AWS_ACCESS_KEY/$AWS_ACCESS_KEY_ID/" \
-        -e "s/RCLONE_AWS_SECRET_KEY/$AWS_SECRET_ACCESS_KEY/" \
+    # Use | as the sed delimiter — AWS secret keys are base64 and can contain '/',
+    # which breaks an s/.../.../ expression. (base64 has no '|'.)
+    sed -e "s|RCLONE_SEAWEEDFS_ACCESS_KEY|$SEAWEEDFS_ACCESS_KEY|" \
+        -e "s|RCLONE_SEAWEEDFS_SECRET_KEY|$SEAWEEDFS_SECRET_KEY|" \
+        -e "s|RCLONE_AWS_ACCESS_KEY|$AWS_ACCESS_KEY_ID|" \
+        -e "s|RCLONE_AWS_SECRET_KEY|$AWS_SECRET_ACCESS_KEY|" \
         /etc/backup/rclone.conf > /tmp/rclone.conf
 
     # Sync to SeaweedFS
