@@ -13,4 +13,3 @@ resources:
   - ha/kube-vip.yaml
   - ha/dnsmasq.yaml
   - ha/matchbox.yaml
-  - ha/pdb.yaml

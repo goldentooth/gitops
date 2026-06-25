@@ -5,3 +5,4 @@ kind: Kustomization
 resources:
   # Alloy HelmRelease - log collection agent (DaemonSet)
   - release.yaml
+  - pdb.yaml
