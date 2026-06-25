@@ -9,7 +9,7 @@ data:
     [seaweedfs]
     type = s3
     provider = Other
-    endpoint = http://seaweedfs-filer.seaweedfs.svc.cluster.local:8333
+    endpoint = http://seaweedfs-seaweedfs-filer.seaweedfs.svc.cluster.local:8333
     env_auth = false
     access_key_id = RCLONE_SEAWEEDFS_ACCESS_KEY
     secret_access_key = RCLONE_SEAWEEDFS_SECRET_KEY
