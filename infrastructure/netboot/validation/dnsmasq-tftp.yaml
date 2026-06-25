@@ -1,0 +1,81 @@
+---
+# dnsmasq TFTP — validation of the load-bearing unknown: does a hostNetwork dnsmasq with
+# bind-dynamic answer TFTP *from* the floating VIP 10.4.0.8 (not the node's primary IP)?
+#
+# TFTP-ONLY on purpose: no DHCP / proxy-DHCP here, so it can't interfere with the live
+# velaryon proxy-DHCP that's still serving production netboot. Serves one throwaway test
+# file (pxelinux.0, ~600KB) so a `tftp 10.4.0.8 get pxelinux.0` from the LAN proves the
+# transport + reply source. Runs on the same Pi5 workers as keepalived.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dnsmasq-tftp-validation
+  namespace: netboot-validation
+data:
+  dnsmasq.conf: |
+    # Not a DNS or DHCP server — TFTP only.
+    port=0
+    enable-tftp
+    tftp-root=/tftp
+    # bind-dynamic: bind per-address, and bind 10.4.0.8 only on the node that currently
+    # holds the VIP (keepalived). This is what makes TFTP replies come FROM 10.4.0.8.
+    bind-dynamic
+    listen-address=10.4.0.8
+    log-debug
+    no-resolv
+    no-hosts
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: dnsmasq-tftp
+  namespace: netboot-validation
+  labels:
+    app: dnsmasq-tftp
+spec:
+  selector:
+    matchLabels:
+      app: dnsmasq-tftp
+  template:
+    metadata:
+      labels:
+        app: dnsmasq-tftp
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values: ["manderly", "norcross", "payne"]
+      containers:
+        - name: dnsmasq
+          image: alpine:3.21
+          securityContext:
+            capabilities:
+              add: ["NET_BIND_SERVICE"]
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              apk add --no-cache dnsmasq
+              mkdir -p /tftp
+              # throwaway ~600KB test artifact to fetch over TFTP
+              [ -f /tftp/pxelinux.0 ] || dd if=/dev/urandom of=/tftp/pxelinux.0 bs=1024 count=600 2>/dev/null
+              echo "serving test file:"; ls -l /tftp/pxelinux.0
+              exec dnsmasq --no-daemon --conf-file=/etc/dnsmasq/dnsmasq.conf
+          volumeMounts:
+            - name: cfg
+              mountPath: /etc/dnsmasq
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+      volumes:
+        - name: cfg
+          configMap:
+            name: dnsmasq-tftp-validation

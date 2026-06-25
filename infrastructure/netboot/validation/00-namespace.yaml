@@ -1,0 +1,16 @@
+---
+# Throwaway namespace for the netboot-VIP validation (Design B2).
+# NOT part of the flux kustomization — apply manually, delete when done:
+#   kubectl apply -f infrastructure/netboot/validation/
+#   kubectl delete ns netboot-validation
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: netboot-validation
+  labels:
+    purpose: netboot-vip-validation
+    # hostNetwork + NET_ADMIN/NET_RAW (keepalived) need privileged PSA, same as the
+    # netboot namespace. Cluster default is baseline, which blocks these.
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged
