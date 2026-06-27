@@ -135,7 +135,15 @@ spec:
         receivers:
           - name: 'ntfy'
             webhook_configs:
-              - url: 'http://ntfy.ntfy.svc.cluster.local/cluster-alerts'
+              # ntfy message templating (v2.11+): template=1 makes ntfy parse the
+              # Alertmanager JSON body and render the title/message Go templates
+              # against it, instead of dumping raw JSON into the notification.
+              # Decoded query params:
+              #   title  = {{if eq .status "firing"}}🔥 FIRING{{else}}✅ RESOLVED{{end}}: {{.commonLabels.alertname}}
+              #   message= {{range .alerts}}{{.annotations.summary}} [{{.labels.severity}}/{{.labels.namespace}}]
+              #            {{if .annotations.description}}{{.annotations.description}}{{end}}{{end}}
+              # ntfy does NOT template priority/tags, so severity/state live in the title text.
+              - url: 'http://ntfy.ntfy.svc.cluster.local/cluster-alerts?template=1&title=%7B%7Bif+eq+.status+%22firing%22%7D%7D%F0%9F%94%A5+FIRING%7B%7Belse%7D%7D%E2%9C%85+RESOLVED%7B%7Bend%7D%7D%3A+%7B%7B.commonLabels.alertname%7D%7D&message=%7B%7Brange+.alerts%7D%7D%7B%7B.annotations.summary%7D%7D+%5B%7B%7B.labels.severity%7D%7D%2F%7B%7B.labels.namespace%7D%7D%5D%0A%7B%7Bif+.annotations.description%7D%7D%7B%7B.annotations.description%7D%7D%0A%7B%7Bend%7D%7D%7B%7Bend%7D%7D'
                 send_resolved: true
 
     # ==================================================================
